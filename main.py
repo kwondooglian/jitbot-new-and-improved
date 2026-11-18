@@ -9,6 +9,7 @@ from collections import Counter
 from PIL import Image
 from dotenv import load_dotenv
 import time
+import traceback
 
 from battle import *
 from utils import *
@@ -914,6 +915,233 @@ def calculate_character_position(char_name, slot_index, background_size):
 
     return (int(paste_x), int(paste_y))
 
+# ============================================================================
+# BATTLE EMBED + BUTTONS
+# ============================================================================
+# battle.py does all of the battle logic, this part only shows it to the user:
+#   - the embed shows everyone's hp, their buffs/debuffs and the battle log (updated after every turn)
+#   - the buttons are the current character's abilities, target buttons (Options F / G) and Retreat
+
+BATTLE_TIMEOUT = 300  # seconds without a button press before the battle ends by itself
+
+# reason numbers for endBattle() in battle.py
+BATTLE_END_REASONS = {"retreat": 0, "defeat": 1, "victory": 2, "timeout": 3, "error": 4}
+
+# text + embed color for every way a battle can end
+BATTLE_ENDINGS = {
+    "victory": ("🏆 **Victory!** Your team won the battle!", 0x2ecc71),
+    "defeat": ("☠️ **Defeat...** Your whole team got knocked out.", 0xe74c3c),
+    "retreat": ("🏳️ You retreated from the battle!", 0x95a5a6),
+    "timeout": ("⌛ The battle ended because no buttons were pressed for 5 minutes.", 0x95a5a6),
+    "error": ("⚠️ Something went wrong so the battle was ended. The error is in the bot console.", 0xe74c3c),
+}
+
+
+def hp_bar(hp, max_hp, length=10):
+    """Text hp bar like ██████░░░░"""
+    filled = round(length * hp / max_hp) if max_hp > 0 else 0
+    if hp > 0:
+        filled = max(1, filled)  # never looks empty while still standing
+    return "█" * filled + "░" * (length - filled)
+
+
+def format_battle_units(rows):
+    """One line per character with their hp bar, plus a line under it for their buffs/debuffs."""
+    lines = []
+    for row in rows:
+        if not row["alive"]:
+            lines.append(f"~~{row['name']}~~ 💀")
+            continue
+        marker = "▶ " if row["current"] else ""
+        lines.append(f"{marker}**{row['name']}** `{hp_bar(row['hp'], row['maxHp'])}` {row['hp']}/{row['maxHp']}")
+        if row["effects"]:
+            effects = row["effects"] if len(row["effects"]) <= 150 else row["effects"][:147] + "..."
+            lines.append(f"   ↳ {effects}")
+    return "\n".join(lines)[:1024] or "\u200b"
+
+
+def newest_lines(lines, limit=1024):
+    """Embed fields can only hold 1024 characters, so keep the newest log lines that fit."""
+    kept, size = [], 0
+    for line in reversed(lines):
+        if len(line) > limit:
+            line = line[:limit - 3] + "..."
+        if size + len(line) + 1 > limit:
+            break
+        kept.append(line)
+        size += len(line) + 1
+    return "\n".join(reversed(kept)) or "\u200b"
+
+
+def build_battle_embed(user_id, enemy_name, prompt=None, ending=None):
+    """The battle embed: whose turn it is, hp of both teams, the battle log and the battle screen image."""
+    summary = getBattleSummary(user_id)
+    embed = discord.Embed(title=f"⚔️ Battle vs {enemy_name} — Round {summary['round']}", color=0x3f48cc)
+    if ending:
+        embed.description, embed.colour = BATTLE_ENDINGS[ending]
+    else:
+        embed.description = prompt or f"It's **{summary['turn']}**'s turn, pick an ability!"
+    embed.add_field(name="Your Team", value=format_battle_units(summary["players"]), inline=False)
+    enemies_text = format_battle_units(summary["enemies"])
+    if summary["field"]:
+        enemies_text = (enemies_text + "\n" + summary["field"])[:1024]
+    embed.add_field(name="Enemies", value=enemies_text, inline=False)
+    embed.add_field(name="Battle Log", value=newest_lines(summary["log"]), inline=False)
+    # the image is already attached to the message, pointing at it again keeps it inside the embed after edits
+    embed.set_image(url=f"attachment://battle_screen_{user_id}.png")
+    embed.set_footer(text="(2t) = turns left • The battle ends after 5 minutes without a button press")
+    return embed
+
+
+# it seems that you need to have a "view" to allow buttons
+class BattleView(discord.ui.View):
+    """Buttons for one battle. They get rebuilt every turn from what battle.py says the current character can do."""
+
+    def __init__(self, user_id: int, enemy_name: str):
+        super().__init__(timeout=BATTLE_TIMEOUT)
+        self.user_id = user_id
+        self.enemy_name = enemy_name
+        self.last_interaction = None  # newest interaction on this battle, used to edit the message if the battle times out
+        self.layout = 0               # goes up every time the buttons change so clicks on old buttons get ignored
+        self.show_ability_buttons()
+
+    def show_ability_buttons(self):
+        """Row 1: the current character's abilities (greyed out while on cooldown), row 2: Retreat."""
+        self.layout += 1
+        self.clear_items()
+        for index, ability in enumerate(getAbilityButtons(self.user_id)):
+            label = ability["name"] if ability["ready"] else f"{ability['name']} ({ability['note']})"
+            button = discord.ui.Button(label=label[:80], style=discord.ButtonStyle.primary, disabled=not ability["ready"], row=0)
+            button.callback = self.ability_pressed(index, self.layout)
+            self.add_item(button)
+        self.add_retreat_button()
+
+    def show_target_buttons(self, ability_index, targets):
+        """Options F / G: one button per possible target, plus Back and Retreat."""
+        self.layout += 1
+        self.clear_items()
+        for unit, name in targets:
+            button = discord.ui.Button(label=name[:80], style=discord.ButtonStyle.success, row=0)
+            button.callback = self.target_pressed(ability_index, unit, self.layout)
+            self.add_item(button)
+        back = discord.ui.Button(label="Back", style=discord.ButtonStyle.secondary, row=1)
+        back.callback = self.back_pressed(self.layout)
+        self.add_item(back)
+        self.add_retreat_button()
+
+    def add_retreat_button(self):
+        retreat = discord.ui.Button(label="Retreat", style=discord.ButtonStyle.danger, row=1)
+        retreat.callback = self.retreat_pressed
+        self.add_item(retreat)
+
+    async def check_press(self, interaction: discord.Interaction, layout=None):
+        """Only the person battling can press the buttons, and only the newest ones."""
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("This is not your battle!", ephemeral=True)
+            return False
+        if not battleExists(self.user_id) or (layout is not None and layout != self.layout):
+            await interaction.response.send_message("Those buttons are out of date!", ephemeral=True)
+            return False
+        self.last_interaction = interaction
+        return True
+
+    def ability_pressed(self, ability_index, layout):
+        async def callback(interaction: discord.Interaction):
+            if not await self.check_press(interaction, layout):
+                return
+            # moves with Option F / G need a target picked first when there is more than 1 choice
+            targets = getTargetChoices(self.user_id, ability_index)
+            if targets:
+                ability_name = getAbilityButtons(self.user_id)[ability_index]["name"]
+                self.show_target_buttons(ability_index, targets)
+                embed = build_battle_embed(self.user_id, self.enemy_name, prompt=f"Who should **{ability_name}** target?")
+                await interaction.response.edit_message(embed=embed, view=self)
+                return
+            await self.take_turn(interaction, ability_index, None)
+        return callback
+
+    def target_pressed(self, ability_index, target, layout):
+        async def callback(interaction: discord.Interaction):
+            if not await self.check_press(interaction, layout):
+                return
+            await self.take_turn(interaction, ability_index, target)
+        return callback
+
+    def back_pressed(self, layout):
+        async def callback(interaction: discord.Interaction):
+            if not await self.check_press(interaction, layout):
+                return
+            self.show_ability_buttons()
+            await interaction.response.edit_message(embed=build_battle_embed(self.user_id, self.enemy_name), view=self)
+        return callback
+
+    async def retreat_pressed(self, interaction: discord.Interaction):
+        """Retreat button to end the battle."""
+        if not await self.check_press(interaction):
+            return
+        await self.finish(interaction, "retreat")
+
+    async def take_turn(self, interaction, ability_index, target):
+        # battle.py does the move, then the rest of the turn order (enemy turn + end of round included)
+        advanceBattle(self.user_id, ability_index, target)
+        result = getBattleResult(self.user_id)
+        if result:
+            await self.finish(interaction, result)
+            return
+        self.show_ability_buttons()
+        await interaction.response.edit_message(embed=build_battle_embed(self.user_id, self.enemy_name), view=self)
+
+    async def finish(self, interaction, ending):
+        embed = build_battle_embed(self.user_id, self.enemy_name, ending=ending)  # before battle.py throws the battle away
+        self.end_battle(ending)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    def end_battle(self, ending):
+        """Cleans up the battle in battle.py, sets inBattle back to false and disables every button."""
+        if battleExists(self.user_id):
+            endBattle(self.user_id, BATTLE_END_REASONS[ending])
+        # set in mongodb battle over
+        inventory_collection.update_one(
+            {"user_id": self.user_id},
+            {"$set": {"inBattle": False}}
+        )
+        for item in self.children:
+            item.disabled = True
+        self.stop()
+
+    async def on_timeout(self):
+        if not battleExists(self.user_id):
+            return
+        embed = build_battle_embed(self.user_id, self.enemy_name, ending="timeout")
+        self.end_battle("timeout")
+        if self.last_interaction:
+            try:
+                await self.last_interaction.edit_original_response(embed=embed, view=self)
+            except discord.HTTPException as error:
+                print("Could not update the timed out battle message:", error)
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception, item):
+        # a bug in the battle code ends the battle instead of leaving the user stuck "in battle"
+        print(f"Battle error for user {self.user_id}:")
+        traceback.print_exception(type(error), error, error.__traceback__)
+        embed = None
+        if battleExists(self.user_id):
+            try:
+                embed = build_battle_embed(self.user_id, self.enemy_name, ending="error")
+            except Exception:
+                embed = None
+        self.end_battle("error")
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send(BATTLE_ENDINGS["error"][0], ephemeral=True)
+            elif embed:
+                await interaction.response.edit_message(embed=embed, view=self)
+            else:
+                await interaction.response.edit_message(content=BATTLE_ENDINGS["error"][0], view=self)
+        except discord.HTTPException:
+            pass
+
+
 @bot.tree.command(name = "battle")
 @app_commands.choices(enemies=[
     app_commands.Choice(name="Ruffian", value="Ruffian"),
@@ -993,81 +1221,22 @@ async def battle(interaction: discord.Interaction,enemies:app_commands.Choice[st
     combined_image_path = f"./graphics/battle/battle_screen_{interaction.user.id}.png"
     background_image.save(combined_image_path)
 
-    embed = discord.Embed(
-        title="Battle Screen",
-        description=f"Battle against **{enemies.name}** is starting!",
-        color=0x3f48cc
-    )
-    embed.set_image(url=f"attachment://battle_screen_{interaction.user.id}.png")
-
-    battleStart = startBattle(interaction.user.id, team, enemyList)
+    # battle.py sets up the turn order, hp and abilities for this user's battle
+    startBattle(interaction.user.id, team, enemyList)
     # set inbattle in mongodb
     inventory_collection.update_one(
         {"user_id": interaction.user.id},
         {"$set": {"inBattle": True}}
     )
 
-    # leaving this as a class inside main.py for now as its weirdly used
-    # it seems that you need to have a "view" to allow buttons
-    class battleView(discord.ui.View):
-        def __init__(self, user_id: int):
-            super().__init__()
-            self.user_id = user_id
-            self.build_ability_buttons(battleStart)
-
-        def build_ability_buttons(self, abilities):
-            # Remove old ability buttons (keep Retreat)
-            self.clear_items()
-            self.add_item(self.retreat_button)
-
-            for i, ability_name in enumerate(abilities):
-                button = discord.ui.Button(
-                    label=ability_name,
-                    style=discord.ButtonStyle.primary,
-                    row=i // 5
-                )
-
-                async def ability_callback(interaction: discord.Interaction, ability_index=i, ability_name=ability_name):
-                    if interaction.user.id != self.user_id:
-                        await interaction.response.send_message("This is not your battle!", ephemeral=True)
-                        return
-                    await interaction.response.defer()
-
-                    nextCharacter = advanceBattle(interaction.user.id, ability_index)
-                    print("NEXT CHARACTER", nextCharacter)
-
-                    self.build_ability_buttons(nextCharacter)
-                    await interaction.edit_original_response(view=self)
-
-                button.callback = ability_callback
-                self.add_item(button)
-
-
-        @discord.ui.button(label="Retreat", style=discord.ButtonStyle.danger, custom_id="retreat_button", row=1)
-        async def retreat_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-            """Retreat button to end the battle."""
-            if interaction.user.id != self.user_id:
-                await interaction.response.send_message("This is not your battle!", ephemeral=True)
-                return
-
-            # End the battle
-            endBattle(interaction.user.id, 0)
-            # set in mongodb battle over
-            inventory_collection.update_one(
-                {"user_id": interaction.user.id},
-                {"$set": {"inBattle": False}}
-            )
-
-            # Disable all buttons
-            for item in self.children:
-                item.disabled = True
-
-            await interaction.response.edit_message(view=self)
-            await interaction.followup.send("You have retreated from the battle!")
-
-
-    battle_view = battleView(interaction.user.id)
-    await interaction.response.send_message(file=discord.File(combined_image_path), embed=embed, view=battle_view)
+    enemy_title = enemies.name if len(enemyList) == 1 else f"{len(enemyList)} {enemies.name}s"
+    battle_view = BattleView(interaction.user.id, enemy_title)
+    try:
+        await interaction.response.send_message(file=discord.File(combined_image_path), embed=build_battle_embed(interaction.user.id, enemy_title), view=battle_view)
+    except Exception:
+        battle_view.end_battle("error")  # don't leave the user stuck "in battle" if the message never got sent
+        raise
+    battle_view.last_interaction = interaction
 
 
 HELP_GIF_URL = "https://media.discordapp.net/attachments/796742546910871562/1442307872490000432/JITSTUCKMOBILEGAME.gif?ex=6926efa1&is=69259e21&hm=160f8b3552a36078f4941e02aafbb3408a95be77be4f5ffa6697ff3aacd53397&format=webp&animated=true"

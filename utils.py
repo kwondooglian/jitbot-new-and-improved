@@ -148,22 +148,54 @@ characterAttributes = {
 
 # Character titles do not matter in Battle.py as main.py will convert the names to the correct format when needed
 
+# ============================================================================
+# HOW AN ABILITY IS WRITTEN
+# ============================================================================
+# "Ability Name": [option letters..., {numbers}]
+#   - the letters say WHAT the move does (Options below)
+#   - the dict at the end is optional and says HOW MUCH / HOW LONG
+#   - example: "Productivity Time": ['C', 'D', 'H', {"buff": {"BB": 10, "CC": 10}, "turns": 3, "cooldown": 4}]
+#       = AOE at Teammates (C) + Buff (D) + Cooldown (H)
+#       = +10% attack and +10% defense for the whole team for 3 turns, then it can't be used for 4 turns
+#
+# A "turn" is one full round: every player goes, then every enemy goes
+# Anything an enemy does during its turn starts counting on the next round,
+# so an enemy's "for 4 turns" covers the players' next 4 turns
+# ============================================================================
+
 # Option A = Damage using Attack Stat (Should be extra parameter in function when calling damaging moves to add damage)
+#            Hits 1 enemy (all of them with Option B) and rolls accuracy vs evasion
+#            numbers: "power" = % of attack used (default 100), "damage" = flat damage instead of the attack stat,
+#                     "percentMaxHP" / "percentCurrentHP" = damage is a % of the target's hp, "trueDamage" = ignores defense buffs,
+#                     "sureHit" = can't miss or be evaded, "recoil" = % of the damage dealt that the user takes too
 # Option B = Area of Effect at Enemies
 # Option C = Area of Effect at Teammates
-# Option D = Buff (However if Option B then it should AOE Buff Enemies and if Option C then AOE Buff Teammates)
-# Option E = Debuff (However if Option B then it should AOE Debuff Enemies and if Option C then AOE Debuff Teammates)
-# Option F = Specific Target on opposing team
-# Option G = Specific Target on own team
-# Option H = Cooldown before you can use the same move again
-# Option I = Stacks of same kind on targets
-# Option J
-# Option K
-# Option L
-# Option M
-# Option N
-# Option O
-# Option P
+# Option D = Buff: the whole team with Option C, one picked teammate with Option G, otherwise yourself
+#            numbers: "buff": {stat: %}, "turns", "heal" = % of max hp healed, "debuffImmune" = can't be debuffed while it lasts
+# Option E = Debuff: every enemy with Option B, one picked enemy with Option F (or the enemy hit by Option A),
+#            with no target letter it lands on yourself (or a random teammate with Option O "randomAlly")
+#            numbers: "debuff": {stat: %}, "turns"
+#            (a buff never goes to the enemies and B / F always aim the debuff at them,
+#             that is how Thief can debuff all enemies AND buff the whole team in 1 move)
+# Option F = Specific Target on opposing team (the player picks with buttons when there is more than 1, enemies pick on their own)
+# Option G = Specific Target on own team (the player picks with buttons when there is more than 1)
+# Option H = Cooldown before you can use the same move again, numbers: "cooldown" = how many turns
+# Option I = Stacks of same kind on targets which works with 1 or multiple targets
+#            numbers: "stacks": {"name", "add", "max", "turns", "perStack": {stat: % for each stack}, "resetOnOtherMove", "loseStackWhenHit"}
+#                     "consumeStacks": {"name", "bonusPerStack"} = uses up all the stacks for extra % damage
+#                     "buffPerStack": {"name", "stats"} = the buff is multiplied by how many stacks you have
+# Option J = Rewind (SSR Abraize): the team's hp, buffs and debuffs go back to how they were at the start of the previous turn
+# Option K = Sleep (R Abraize): skip your next turn then wake up with a buff, numbers: "sleepTurns", "wakeBuff": {stat: %}, "wakeTurns"
+# Option L = Taunt: enemies' single target attacks have to go at you, numbers: "taunt" = how many turns
+# Option M = Lingering effect that does something every turn, numbers: "lingering": {...}
+#            "Burn" / "Bleed" = lose "percent" of max hp every turn (lands on the other side like Option E, "stackable" lets it stack)
+#            "Regeneration" with "heal": True = heal "percent" of max hp every turn (lands on your side like Option D)
+#            "Void Spot" (SSR Trey) = sits on the field, ranged attacks miss and power it up, it grows every turn and then bursts
+# Option N = Interrupt: "interrupt": {"name", "chance", "guardsAllies", "counter"} = a status with a chance to cancel an enemy
+#            attack, it is used up once it works (R Noah's Interfere protects Noah, SR Freeman's Nervous protects the whole team)
+# Option O = Luck: "chance" = % the move works at all, "outcomes" = list of moves and 1 gets picked at random,
+#            "randomAlly" = the debuff lands on a random teammate, "dice": [sides, damage for each number rolled]
+# Option P = Doom Marks (SSR Scottie): "doom" = "fatedStrike" / "dread" / "martyrdom" / "nihilism"
 # Option Q = Jack Noir Special Passive (Attack lowest health target each turn)
 # Option R = Future Boss Special Reserved
 # OPtion S = Future Boss Special Reserved
@@ -175,99 +207,164 @@ characterAttributes = {
 # Option Y = reserved
 # Option Z = Skip Move (For Dev)
 
-# Options D and E are Basic buffs meaning they only change the 5 main stats of HP, Attack, Defense, Evasion, and Accuracy
+# Other numbers any move can have
+#   "turns" = how long buffs/debuffs last (default 1, 0 = only for the rest of the current turn)
+#   "once" = can only be used once per battle (ultimates)
+#   "extraTurn" = the user goes again straight away
+#   "selfDamage" = flat hp the user pays, "selfHeal" = % of max hp the user heals
+#   "accuracy" = replaces the user's accuracy for this move (and makes a move without Option A roll to hit too)
+#   "ranged" = it is a ranged attack (these miss while a Void Spot is on the field)
+#   "buffName" / "debuffName" = name shown in the embed for the buff/debuff (like "Warped")
+#   "failText" = what the battle log says when an Option O "chance" move doesn't work
 
-# Abilities Moveset + Options for abilities
+# Options D and E are Basic buffs meaning they only change the 5 main stats of HP, Attack, Defense, Evasion, and Accuracy
+# These are the stat codes used inside "buff" / "debuff":
+#   AA = HP       -> changes max hp by that % (current hp can't go above the new max)
+#   BB = Attack   -> +10 = deals 10% more damage
+#   CC = Defense  -> +10 = takes 10% less damage (base defense is already inside ehp, so defense buffs change damage taken instead)
+#   DD = Accuracy -> added straight onto the percentage (90% accuracy with DD +10 = 100%)
+#   EE = Evasion  -> added straight onto the percentage
+statNames = {"AA": "HP", "BB": "ATK", "CC": "DEF", "DD": "ACC", "EE": "EVA"}
+
+# Abilities Moveset + Options for abilities (what every move does is written in the /char embeds in main.py)
 characterAbilities = {
   "r_abraize": {
-    "Punch": ['A'],                         # Flat Damage using Attack Stat
-    "Sleep": ['Z'],                         # Skip Turn (temp)
-    "Missing Assignments": ['Z']       # Buff self with +5% evasion for 1 turn
+    "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
+    # Evasion drops to 0% and you skip your next turn, then wake up with +15% atk and def for 2 turns
+    "Sleep": ['E', 'K', {"debuff": {"EE": 100}, "turns": 2, "sleepTurns": 1, "wakeBuff": {"BB": 15, "CC": 15}, "wakeTurns": 2}],
+    "Missing Assignments": ['D', {"buff": {"DD": 5}, "turns": 1}]   # +5% accuracy to self for 1 turn
   },
   "r_abraize2": {
-    "Punch": ['A'],                         # Flat Damage using Attack Stat
-    "Eat Note": ['Z'],                      # Skip turn (temp)
-    "Productivity Time": ['Z']              # Skip turn (temp)
+    "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
+    "Eat Note": ['D', {"buff": {"EE": 10}, "turns": 1, "selfDamage": 25}],  # +10% evasion to self for 1 turn, costs 25 hp
+    # +10% atk and def for the whole team for 3 turns, 4 turn cooldown
+    "Productivity Time": ['C', 'D', 'H', {"buff": {"BB": 10, "CC": 10}, "turns": 3, "cooldown": 4}]
   },
   "sr_abraize": {
-    "Punch": ['A'],                         # Flat Damage using Attack Stat
-    "Slow": ['Z'],                          # Skip turn (temp)
-    "Attempt": ['Z']                        # Skip turn (temp)
+    "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
+    "Slow": ['E', 'F', {"debuff": {"DD": 15}, "turns": 2}],         # -15% accuracy to 1 enemy for 2 turns
+    # 15% chance to work: heals self for 50% and gives the whole team +20% atk for 1 turn
+    "Attempt": ['C', 'D', 'O', {"chance": 15, "selfHeal": 50, "buff": {"BB": 20}, "turns": 1,
+                                "failText": "but nothing happened... (it only works 15% of the time)"}]
   },
   "ssr_abraize": {
-    "Accelerated Punch": ['A'],             # Flat Damage using Attack Stat
-    "Fast Forward": ['Z'],                  # Skip turn (temp)
-    "Rewind": ['Z'],                        # Skip turn (temp)
-    "Universal Stabilizer": ['Z']          # Skip turn (temp)
+    # Can't miss, +1 Accelerated stack (+10% atk each, max 10 = +100%), all stacks are lost when using any other move
+    "Accelerated Punch": ['A', 'F', 'I', {"sureHit": True, "stacks": {"name": "Accelerated", "add": 1, "max": 10,
+                                                                      "perStack": {"BB": 10}, "resetOnOtherMove": True}}],
+    # +5% acc, +40% atk, +15% def for the team for 1 turn and you go again straight away, 5 turn cooldown
+    "Fast Forward": ['C', 'D', 'H', {"buff": {"DD": 5, "BB": 40, "CC": 15}, "turns": 1, "extraTurn": True, "cooldown": 5}],
+    "Rewind": ['H', 'J', {"cooldown": 2}],                          # Team goes back to how it was last turn, 2 turn cooldown
+    # Ultimate: the team can't be debuffed, +50% atk for 5 turns and everyone is healed to full, once per battle
+    "Universal Stabilizer": ['C', 'D', {"buff": {"BB": 50}, "turns": 5, "debuffImmune": True, "heal": 100, "once": True}]
   },
-    "r_trey": {
-    "Punch": ['A'],                         # Flat Damage using Attack Stat
-    "Irish Goodbye": ['Z'],                 # Skip turn (temp)
-    "Cheesy Fries": ['Z']                   # Skip turn (temp)
+  "r_trey": {
+    "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
+    "Irish Goodbye": ['D', 'H', {"buff": {"EE": 10}, "turns": 1, "cooldown": 2}],  # +10% evasion to self for 1 turn, 2 turn cooldown
+    # 70% chance to hit 1 enemy with Burn (loses 5% of their max hp at the end of the turn)
+    "Cheesy Fries": ['F', 'M', {"accuracy": 70, "ranged": True, "lingering": {"name": "Burn", "percent": 5, "turns": 1}}]
   },
   "sr_trey": {
-    "Punch": ['A'],                         # Flat Damage using Attack Stat
-    "Drowsy": ['Z'],                        # Skip turn (temp)
-    "Whispers from Beyond": ['Z']           # Skip turn (temp)
+    "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
+    "Drowsy": ['B', 'E', {"debuff": {"DD": 10}, "turns": 1}],       # -10% accuracy to all enemies for 1 turn
+    "Whispers from Beyond": ['C', 'D', {"buff": {"DD": 10}, "turns": 2}]  # +10% accuracy for the team for 2 turns
   },
   "ssr_trey": {
-    "Punch": ['A'],                         # Flat Damage using Attack Stat
-    "Cloak and Dagger": ['Z'],              # Skip turn (temp)
-    "Shroud": ['Z'],                        # Skip turn (temp)
-    "Reality Sink": ['Z']                   # Skip turn (temp)
+    "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
+    # +100% eva and +10% acc to self for 1 turn, then stab 1 enemy for 10% of their max hp as true damage, 2 turn cooldown
+    "Cloak and Dagger": ['A', 'D', 'F', 'H', {"buff": {"EE": 100, "DD": 10}, "turns": 1, "percentMaxHP": 10,
+                                              "trueDamage": True, "cooldown": 2}],
+    # +50% evasion for the team for 3 turns, but enemies have to attack you for 1 turn, 4 turn cooldown
+    "Shroud": ['C', 'D', 'H', 'L', {"buff": {"EE": 50}, "turns": 3, "taunt": 1, "cooldown": 4}],
+    # Ultimate: Void Spot for 3 turns, ranged attacks miss (+50% power each), +100% power every turn, then it bursts on all enemies
+    "Reality Sink": ['M', {"lingering": {"name": "Void Spot", "turns": 3, "growPerTurn": 100, "growPerRanged": 50}, "once": True}]
   },
   "r_noah": {
-    "Punch": ['A'],                         # Flat Damage using Attack Stat
-    "Fiddle": ['Z'],                        # -5% debuff to all stats to 1 enemy
-    "Bo": ['Z']                             # Skip turn (temp)
+    "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
+    "Fiddle": ['E', 'F', {"debuff": {"DD": 5}, "turns": 2}],        # -5% accuracy to 1 enemy for 2 turns
+    "Bo": ['H', 'N', {"interrupt": {"name": "Interfere", "chance": 50}, "cooldown": 2}]  # 50% to cancel the next hit on self, 2 turn cooldown
   },
   "r_freeman": {
-    "Slap": ['A'],                         # Flat Damage using Attack Stat
-    "Ponder": ['Z'],                       # +3% evasion buff to all teammates
-    "SMASH!": ['Z']                        # Skip turn (temp)
+    "Slap": ['A', 'F'],                                             # Flat Damage using Attack Stat
+    "Ponder": ['C', 'D', {"buff": {"EE": 3}, "turns": 1}],          # +3% evasion for the team for 1 turn
+    "SMASH!": ['A', 'D', 'F', {"buff": {"BB": 10}, "turns": 1, "recoil": 100}]  # +10% atk to self then attack, take the same damage back
   },
   "sr_freeman": {
-    "Pistol Whip": ['A'],                  # Flat Damage using Attack Stat
-    "Shoot": ['Z'],                        # Skip turn (temp)
-    "Hide": ['Z']                          # Skip turn (temp)
+    "Pistol Whip": ['A', 'F'],                                      # Flat Damage using Attack Stat
+    # 20% chance the safety is off and it deals 10% of the enemy's current hp
+    "Shoot": ['A', 'F', 'O', {"chance": 20, "percentCurrentHP": 10, "sureHit": True, "ranged": True,
+                              "failText": "but the safety was on!"}],
+    # Nervous: 25% chance to interrupt any enemy attack on the team and Shoot the attacker back (used up once it works)
+    "Hide": ['N', {"interrupt": {"name": "Nervous", "chance": 25, "guardsAllies": True, "counter": "Shoot"}}]
   },
   "r_stephen": {
-    "Dropkick": ['A'],                     # Flat Damage using Attack Stat
-    "Light up": ['Z'],                     # Skip turn (temp)
-    "Lock the fuck in": ['Z']              # Skip turn (temp)
+    "Dropkick": ['A', 'F'],                                         # Flat Damage using Attack Stat
+    # +1 Baller stack for 3 turns and enemies have to attack you for 3 turns, every hit you take removes a stack
+    "Light up": ['I', 'L', {"stacks": {"name": "Baller", "add": 1, "turns": 3, "loseStackWhenHit": True}, "taunt": 3}],
+    "Lock the fuck in": ['D', 'I', {"buffPerStack": {"name": "Baller", "stats": {"BB": 5}}, "turns": 1}]  # +5% atk per Baller stack for 1 turn
   },
   "sr_stephen": {
-    "Dropkick": ['A'],                     # Flat Damage using Attack Stat
-    "Consider Intervening": ['Z'],         # Skip turn (temp)
-    "HIYAAAHHH!": ['Z']                    # Skip turn (temp)
+    "Dropkick": ['A', 'F'],                                         # Flat Damage using Attack Stat
+    "Consider Intervening": ['I', {"stacks": {"name": "Considering", "add": 1, "turns": 3}}],  # +1 Considering stack (lasts 3 turns)
+    "HIYAAAHHH!": ['A', 'F', 'I', {"consumeStacks": {"name": "Considering", "bonusPerStack": 10}}]  # +10% damage per stack, uses them up
   },
   "ssr_jayden": {
-    "Punch": ['A'],                        # Flat Damage using Attack Stat
-    "Butler of Swatabi": ['Z'],            # Skip turn (temp)
-    "Indecision": ['Z'],                   # Skip turn (temp)
-    "Genesis": ['Z']
+    "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
+    "Butler of Swatabi": ['B', 'E', {"debuff": {"DD": 30}, "turns": 2}],  # -30% accuracy to all enemies for 2 turns
+    # 1/3: +20% atk and def for the team, 1/3: -20% atk and def to all enemies, 1/3: lose 1 hp
+    "Indecision": ['O', {"outcomes": [
+      ['C', 'D', {"buff": {"BB": 20, "CC": 20}, "turns": 2}],
+      ['B', 'E', {"debuff": {"BB": 20, "CC": 20}, "turns": 2}],
+      [{"selfDamage": 1}]
+    ]}],
+    # Ultimate: Regeneration (5% hp every turn) for the team and Warped (-25% acc, -35% max hp, -25% def) on all enemies for 7 turns
+    "Genesis": ['B', 'C', 'E', 'M', {"lingering": {"name": "Regeneration", "percent": 5, "turns": 7, "heal": True},
+                                     "debuff": {"DD": 25, "AA": 35, "CC": 25}, "debuffName": "Warped", "turns": 7, "once": True}]
   },
   "sr_homestuck": {
-    "Impractical Assailants": ['A'],       # Flat Damage using Attack Stat
-    "Plunder": ['Z'],                      # Skip turn (temp)
-    "Thief": ['Z']                         # Skip turn (temp)
+    "Impractical Assailants": ['A', 'F', 'O', {"dice": [6, 10]}],  # Roll a die, 10 damage for every number rolled
+    # +15% atk to self and -15% atk to a random teammate for 1 turn
+    "Plunder": ['D', 'E', 'O', {"buff": {"BB": 15}, "debuff": {"BB": 15}, "randomAlly": True, "turns": 1}],
+    # -100% accuracy to all enemies and +100% accuracy for the team for 1 turn, 5 turn cooldown
+    "Thief": ['B', 'C', 'D', 'E', 'H', {"buff": {"DD": 100}, "debuff": {"DD": 100}, "turns": 1, "cooldown": 5}]
   },
   "ssr_scottie": {
-    "Ultimate Strike": ['A'],              # Flat Damage using Attack Stat
-    "Shadow Dance": ['Z'],                 # Skip turn (temp)
-    "Phantom Grip": ['Z']                  # Skip turn (temp)
+    # Low damage (50% atk) that can't miss, every 2nd hit on the same enemy gives it a Doom Mark
+    "Fated Strike": ['A', 'F', 'P', {"power": 50, "sureHit": True, "doom": "fatedStrike"}],
+    # All enemies: -(15% + 7.5% per Doom Mark) atk and -(20% + 5% per Doom Mark) acc for 3 turns, uses up the marks
+    "Existential Dread": ['B', 'E', 'P', {"doom": "dread", "debuff": {"BB": 15, "DD": 20}, "perMark": {"BB": 7.5, "DD": 5}, "turns": 3}],
+    # Enemies have to attack you and you take 30% less damage for 2 turns, every hit you take gives the attacker a Doom Mark
+    # If you get knocked out during it, every Doom Mark explodes for 150% of your atk
+    "Martyrdom": ['D', 'L', 'P', {"buff": {"CC": 30}, "turns": 2, "taunt": 2, "doom": "martyrdom", "explodePower": 150}],
+    # Ultimate: from turn 4 with 5+ Doom Marks out, for 3 turns every enemy hurts itself, hits an ally or lies still each turn
+    "Nihilism": ['B', 'P', {"doom": "nihilism", "requiresRound": 4, "requiresMarks": 5, "turns": 3, "once": True}]
   }
 }
 
 enemyAbilities = {
   "Ruffian1": {
-    "Punch": ['A']                         # Flat Damage using Attack Stat
+    "Punch": ['A', 'F']                                             # Flat Damage using Attack Stat
   },
   "Ruffian2": {
-    "Punch": ['A']                         # Flat Damage using Attack Stat
+    "Punch": ['A', 'F']                                             # Flat Damage using Attack Stat
   },
   "Grunt": {
-    "Punch": ['A'],                        # Flat Damage using Attack Stat
-    "Slam": ['A', 'B']                     # Damage to all enemies
+    "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
+    "Slam": ['A', 'B', {"damage": 15}]                              # 15 damage to all party members
+  },
+  "Spearman": {
+    "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
+    "Swipe": ['A', 'B', {"damage": 20}],                            # 20 damage to all party members
+    "Stab": ['A', 'D', 'F', {"buff": {"BB": 15}, "turns": 0}]       # +15% atk for the rest of this turn, then attack
+  },
+  "Agent": {
+    "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
+    "Sneak": ['A', 'D', 'F', {"buff": {"EE": 15}, "turns": 4}]      # +15% evasion for the next 4 turns, then Punch
+  },
+  "Jack Noir": {
+    "Stab": ['A', 'F', 'Q'],                                        # Hits the party member with the lowest hp
+    # Hits the lowest hp party member and makes them Bleed (3% of max hp next turn), Bleed stacks
+    "Shiv": ['A', 'F', 'I', 'M', 'Q', {"lingering": {"name": "Bleed", "percent": 3, "turns": 1, "stackable": True}}],
+    # Only 5 damage, but to all party members and they all Bleed
+    "Slash": ['A', 'B', 'M', {"damage": 5, "lingering": {"name": "Bleed", "percent": 3, "turns": 1, "stackable": True}}]
   }
 }

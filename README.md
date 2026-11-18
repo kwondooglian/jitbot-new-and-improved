@@ -41,5 +41,5 @@
  - Utils.py is a beautiful simple python file that stores pure data and can be referenced from Battle.py or main.py
  - calculate_feet.py should be moved into its own folder called "tools" as its never run by the program and you would only run it yourself with specific parameters when adding a new character to figure out spacing
  - I suggest moving the final 3 pngs and gifs into folders to keep it clean and fixing the code when it points to them
- - If you want to enable sssr_max then go to line 77 of main.py and uncomment the + secretChar
+ - If you want to enable sssr_max then go to line 78 of main.py and uncomment the + secretChar
  - Finally any changes you do to the bots code you must stop and restart the bot for them to truly apply
