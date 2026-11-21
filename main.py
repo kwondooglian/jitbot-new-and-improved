@@ -121,6 +121,16 @@ character_choices = [
     for char in all_characters
 ]
 
+# /char groups every version of a character together, like "abraize" -> r_abraize, r_abraize2, sr_abraize, ssr_abraize
+# (the group is the dev name without the rarity at the start and any number at the end)
+merged_groups = {"jayden": "jaiden"}  # groups shown as 1 character: ssr_jayden goes in with r_jaiden
+character_groups = {}
+for char in all_characters:
+    group = char.split("_", 1)[1].rstrip("0123456789")
+    character_groups.setdefault(merged_groups.get(group, group), []).append(char)
+character_group_choices = [app_commands.Choice(name=name.capitalize(), value=name) for name in character_groups]
+rarity_choices = [app_commands.Choice(name=rarity, value=rarity) for rarity in RARITY_ORDER if rarity != "SSSR"]  # secret characters can't be picked anyway
+
 # Banners come from banners.py (the README's "Adding a new banner" part explains how to add one)
 # They get checked here when the bot starts and any mistakes are printed in the console
 BANNERS = loadBanners(all_characters)
@@ -192,7 +202,7 @@ def ssr_abraizeEmbed():
     embed.add_field(name="ACC:", value=characterAttributes["ssr_abraize"][4], inline=True)
     embed.add_field(name=characterAttributes["ssr_abraize"][5], value="Accelerate yourself to punch the opponent. Guaranteed to hit. Applies one stack of 'Accelerated' state to self. Gain +10% atk for every consecutive 'Accelerated' state with a maximum of +100% atk. All 'Accelerated' stacks are removed when using another move.", inline=False)
     embed.add_field(name=characterAttributes["ssr_abraize"][6], value="Apply a +5% acc bonus, +40% atk bonus, and +15% def bonus to all allies for one turn and allows you to immediately take another turn. Cannot be used for another 5 turns.", inline=False)
-    embed.add_field(name=characterAttributes["ssr_abraize"][7], value="Revert all party member's stats to the state they were in during the prior turn. Cannot be used for another 2 turns.", inline=False)
+    embed.add_field(name=characterAttributes["ssr_abraize"][7], value="Revert all party member's stats to the state they were in during the prior turn. Cannot be used for another 3 turns.", inline=False)
     embed.add_field(name=characterAttributes["ssr_abraize"][8], value="Your status as an anchor of time and your experience lends you well to combat. Turn back the wheels of time to make everything right again. Applies debuff nullification (cannot be debuffed) and a +50% atk bonus to all allies for 5 turns. Heals all allies to full. Cannot be used again.", inline=False)
     return embed
 
@@ -364,8 +374,8 @@ def ssr_jaydenEmbed():
     embed.add_field(name="DEF:", value=characterAttributes["ssr_jayden"][2], inline=True)
     embed.add_field(name="EVA:", value=characterAttributes["ssr_jayden"][3], inline=True)
     embed.add_field(name="ACC:", value=characterAttributes["ssr_jayden"][4], inline=True)
-    embed.add_field(name=characterAttributes["ssr_jayden"][5], value="Throw a mean right hook at the enemy.", inline=False)
-    embed.add_field(name=characterAttributes["ssr_jayden"][6], value="Leverage your dreadful reputation as the Butler of Ill Repute. -30% acc for all enemies.", inline=False)
+    embed.add_field(name=characterAttributes["ssr_jayden"][5], value="Distort the space around you, dealing 50% of your atk as damage to all enemies.", inline=False)
+    embed.add_field(name=characterAttributes["ssr_jayden"][6], value="Leverage your dreadful reputation as the Butler of Ill Repute. -30% acc for all enemies. Cannot be used for another 2 turns.", inline=False)
     embed.add_field(name=characterAttributes["ssr_jayden"][7], value="33% chance to buff all allies atk and def by 20%, 33% chance to debuff all enemies atk and def by 20%, 33% chance to deal 1 hp of damage to self.", inline=False)
     embed.add_field(name=characterAttributes["ssr_jayden"][8], value="With the power of creation on your side, it is your sworn duty to bring about its influence in this world. It is your job to decrease the space between you and your allies, and to increase the space between your allies and your enemies. Apply \"Regeneration\" status (5% hp heal every turn) for the next 7 turns, as well as apply \"Warped\" status (-25% acc penalty, -35% max hp, -25% def) to all enemies for the next 7 turns. Cannot be used again.", inline=False)
     return embed
@@ -393,7 +403,7 @@ def ssr_scottieEmbed():
     embed.add_field(name="ACC:", value=characterAttributes["ssr_scottie"][4], inline=True)
     embed.add_field(name=characterAttributes["ssr_scottie"][5], value="Unique Property is that the attack is unaffected by accuracy debuffs and is guaranteed to connect, Low Damage and If used twice applies a doom mark", inline=False)
     embed.add_field(name=characterAttributes["ssr_scottie"][6], value="Debuff targets all enemiesby reducing accuracy and damage on all enemies for 3 turns. Accuracy and damage reduction scale for the amount of doom marks an enemy has. All doom marks are consumed and removed upon use", inline=False)
-    embed.add_field(name=characterAttributes["ssr_scottie"][7], value="Redirects enemies to attack Scottie for 2 turns Damage reduction 30% Each successfull attack landed on Scottie inflicts 1 doom mark to the assailant (If an enemy does a single strong hit only one mark will apply, but if an enemy does a barrage; the amount of marks will follow accordingly) 1x12=1 mark 3x4=3 marks If Scottie is to die during martyrdom the doom marks that were already applied will explode dealing major damage to enemies", inline=False)
+    embed.add_field(name=characterAttributes["ssr_scottie"][7], value="Redirects enemies to attack Scottie for 2 turns Damage reduction 30% Each successfull attack landed on Scottie inflicts 1 doom mark to the assailant (If an enemy does a single strong hit only one mark will apply, but if an enemy does a barrage; the amount of marks will follow accordingly) 1x12=1 mark 3x4=3 marks If Scottie is to die during martyrdom the doom marks that were already applied will explode dealing major damage to enemies. Cannot be used for another 2 turns.", inline=False)
     embed.add_field(name=characterAttributes["ssr_scottie"][8], value="Only usable after a minimum of 3 turns and if the total amount of doom makes on the field is 5 For 3 turns every enemy on the field will lose all sense of will and reason Causing a chance event for each turn applied 33% chance for an enemy to harm itself 33% chance for an enemy to attack on of its allies 33% chance for an enemy to lay motionless allowing all attack done to them be guaranteed to land", inline=False)
     return embed
 
@@ -491,6 +501,11 @@ async def roll(interaction: discord.Interaction, banner: str, amount: int = None
             lines = [f"**{characterTitles.get(char, char)}** +{cnt}" for char, cnt in counts.items()]
             embed.add_field(name=f"{rarity} Characters:", value="\n".join(lines)[:1024], inline=False)
 
+    # an SSSR pulled always shows its gif, otherwise the first SSR pulled does (the same gif its /char card uses)
+    first_ssr = next((char for rarity in ("SSSR", "SSR") for char in rolled_characters if getRarity(char) == rarity), None)
+    if first_ssr:
+        embed.set_image(url=character_card(first_ssr).image.url)
+
     await interaction.response.send_message(embed=embed)
 
 @bot.tree.command()
@@ -529,37 +544,79 @@ async def inventory(ctx):
     else:
         await ctx.response.send_message(f"{ctx.user.mention} No inventory data found.")
 
+async def char_type_autocomplete(interaction: discord.Interaction, current: str):
+    """The cards of the character (and rarity) already picked in /char or /recycle, so the user can pick 1 of them."""
+    picked = interaction.namespace  # what the user filled in so far (character / rarity are None until they're picked)
+    typed = current.strip().lower()
+    return [
+        app_commands.Choice(name=characterTitles[char], value=char)
+        for char in character_groups.get(picked.character, all_characters)
+        if (picked.rarity is None or getRarity(char) == picked.rarity) and typed in characterTitles[char].lower()
+    ][:25]
+
 # Ephemeral Message
 @bot.tree.command()
-@app_commands.choices(character_name=character_choices)
-async def char(interaction: discord.Interaction, character_name: app_commands.Choice[str]):
+@app_commands.rename(char_type="type")
+@app_commands.describe(character="Which character to show", rarity="Only show this rarity (leave it empty to show every rarity)",
+                       char_type="Only show this 1 card (leave it empty to show all of them)")
+@app_commands.choices(character=character_group_choices, rarity=rarity_choices)
+@app_commands.autocomplete(char_type=char_type_autocomplete)
+async def char(interaction: discord.Interaction, character: app_commands.Choice[str], rarity: app_commands.Choice[str] = None, char_type: str = None):
     """Show Character Info"""
-    yesMax = False
-    # Get the character dev name from the choice value
-    char_dev_name = character_name.value
+    # Every version of the character (only the chosen rarity if one was picked)
+    char_dev_names = [char for char in character_groups[character.value] if rarity is None or getRarity(char) == rarity.value]
+    if not char_dev_names:
+        await interaction.response.send_message(f"**{character.name}** has no **{rarity.value}** characters!", ephemeral=True)
+        return
 
-    # Check if user owns the character
+    # Only the 1 card picked in type (the menu gives its dev name, typing the full title out works too)
+    if char_type is not None:
+        char_dev_names = [char for char in char_dev_names if char_type.strip().lower() in (char, characterTitles[char].lower())]
+        if not char_dev_names:
+            typed = discord.utils.escape_mentions(discord.utils.escape_markdown(char_type[:100]))
+            rarity_text = f" **{rarity.value}**" if rarity else ""
+            await interaction.response.send_message(f"**{typed}** is not one of **{character.name}'s**{rarity_text} cards! Pick one from the **type** menu.", ephemeral=True)
+            return
+
+    # Only show the ones the user owns
     user_data = inventory_collection.find_one({"user_id": interaction.user.id})
     if user_data:
         inventory = user_data.get("inventory", {})
-        if inventory.get(char_dev_name, 0) < 1:
-            # if sssr_max then continue even if user does not own
-            if char_dev_name == "sssr_max":
-                pass
-            else:
-                await interaction.response.defer()
-                await interaction.followup.send(file=discord.File(otherImages["no_own_png"]))
-                return
+        # if sssr_max then continue even if user does not own
+        char_dev_names = [char for char in char_dev_names if inventory.get(char, 0) >= 1 or char == "sssr_max"]
+        if not char_dev_names:
+            await interaction.response.defer()
+            await interaction.followup.send(file=discord.File(otherImages["no_own_png"]))
+            return
     else:
         await interaction.response.send_message("No inventory data found.")
         return
 
-    if char_dev_name == "sssr_max":
+    yesMax = "sssr_max" in char_dev_names
+    if yesMax:
         await interaction.response.defer()
     else:
         await interaction.response.defer(ephemeral=True)
 
-    # The message below will be hidden from other users.
+    embeds = [character_embed(char_dev_name) for char_dev_name in char_dev_names]
+
+    # A message can hold 10 embeds and 6000 characters in total, so a big group gets split over more messages
+    messages = [[]]
+    for embed in embeds:
+        if len(messages[-1]) == 10 or sum(len(e) for e in messages[-1]) + len(embed) > 6000:
+            messages.append([])
+        messages[-1].append(embed)
+
+    # The messages below will be hidden from other users.
+    for message_embeds in messages:
+        await interaction.followup.send(embeds=message_embeds, ephemeral=not yesMax)
+    if yesMax:
+        await asyncio.sleep(2)  # asyncio.sleep instead of time.sleep so the whole bot doesn't freeze for 2 seconds
+        await interaction.delete_original_response()
+
+
+def character_embed(char_dev_name):
+    """The /char card of 1 character."""
     if char_dev_name == "r_abraize":
         embed = r_abraizeEmbed()
     elif char_dev_name == "r_abraize2":
@@ -600,15 +657,9 @@ async def char(interaction: discord.Interaction, character_name: app_commands.Ch
         embed = r_jaidenEmbed()
     elif char_dev_name == "sssr_max":
         embed = sssr_maxEmbed()
-        yesMax = True
     else:
-        await interaction.followup.send(f"Character **{char_dev_name}** does not exist!")
-        return
-
-    await interaction.followup.send(embed=embed)
-    if yesMax:
-        await asyncio.sleep(2)  # asyncio.sleep instead of time.sleep so the whole bot doesn't freeze for 2 seconds
-        await interaction.delete_original_response()
+        embed = discord.Embed(title=characterTitles.get(char_dev_name, char_dev_name), description=f"Character **{char_dev_name}** does not have a card yet!", color=0x3f48cc)
+    return embed
 
 
 def bannerListEmbed():
@@ -689,6 +740,7 @@ def itemStoreEmbed(user_data):
         embed.description += "\nThere are no items for sale right now. An admin needs to check the items collection in MongoDB (the bot console says what is wrong)."
     # rolls can be bought as many times as they like (the price is rollPrice in utils.py)
     embed.add_field(name=f"🎲 Roll • {rollPrice} Grist", value="One roll to use on any banner with **/roll**. You can buy as many as you like.", inline=False)
+    embed.add_field(name=f"🎲 {rollBundleAmount} Rolls • {rollBundlePrice} Grist", value=f"{rollBundleAmount} rolls at once for less Grist. You can buy as many as you like.", inline=False)
     for item in STORE_ITEMS[:MAX_STORE_ITEMS]:
         if item["name"] == user_data.get("equipped_item"):
             status = " ⭐ Equipped"
@@ -733,8 +785,11 @@ class ItemStoreView(discord.ui.View):
         roll_button = discord.ui.Button(label=f"🎲 Buy a Roll ({rollPrice} Grist)", style=discord.ButtonStyle.primary, row=0)
         roll_button.callback = self.buy_roll
         self.add_item(roll_button)
+        bundle_button = discord.ui.Button(label=f"🎲 Buy {rollBundleAmount} Rolls ({rollBundlePrice} Grist)", style=discord.ButtonStyle.primary, row=0)
+        bundle_button.callback = lambda interaction: self.buy_roll(interaction, rollBundleAmount, rollBundlePrice)
+        self.add_item(bundle_button)
         owned = ownedItems(user_data)
-        for index, item in enumerate(STORE_ITEMS[:MAX_STORE_ITEMS], start=1):  # start=1 because the roll button is first
+        for index, item in enumerate(STORE_ITEMS[:MAX_STORE_ITEMS], start=2):  # start=2 because the 2 roll buttons are first
             emoji = f"{item['emoji']} " if item["emoji"] else ""
             if item["name"] in owned:
                 button = discord.ui.Button(label=f"{emoji}{item['name']} (owned)"[:80], style=discord.ButtonStyle.secondary, disabled=True, row=index // 5)
@@ -770,25 +825,26 @@ class ItemStoreView(discord.ui.View):
             await interaction.followup.send(f"You bought **{itemTitle(item)}** for **{item['price']}** Grist! You have **{user_data.get('grist', 0)}** Grist left.\nPut it on your team with **/item equip**.", ephemeral=True)
         return callback
 
-    async def buy_roll(self, interaction: discord.Interaction):
-        # take the Grist and give the roll in 1 update, and only if they can afford it (so the Grist can't go below 0)
+    async def buy_roll(self, interaction: discord.Interaction, amount=1, price=rollPrice):
+        # take the Grist and give the roll(s) in 1 update, and only if they can afford it (so the Grist can't go below 0)
         bought = inventory_collection.update_one(
-            {"user_id": interaction.user.id, "grist": {"$gte": rollPrice}},
-            {"$inc": {"grist": -rollPrice, "rolls": 1}},
+            {"user_id": interaction.user.id, "grist": {"$gte": price}},
+            {"$inc": {"grist": -price, "rolls": amount}},
         )
+        what = "a roll" if amount == 1 else f"{amount} rolls"
         user_data = inventory_collection.find_one({"user_id": interaction.user.id})
         if not user_data:
             await interaction.response.send_message(f"{interaction.user.mention} No inventory data found. Please contact an Admin immediately.", ephemeral=True)
             return
         if bought.modified_count == 0:
             grist = user_data.get("grist", 0)
-            await interaction.response.send_message(f"You need **{rollPrice - grist}** more Grist to buy a roll. It costs **{rollPrice}** and you have **{grist}**.", ephemeral=True)
+            await interaction.response.send_message(f"You need **{price - grist}** more Grist to buy {what}. It costs **{price}** and you have **{grist}**.", ephemeral=True)
             return
         # show the new Grist and rolls in the store, then confirm the purchase
         self.show_buttons(user_data)
         await interaction.response.edit_message(embed=itemStoreEmbed(user_data), view=self)
         rolls = user_data.get("rolls", 0)
-        await interaction.followup.send(f"You bought a roll for **{rollPrice}** Grist! You have **{rolls}** roll{'' if rolls == 1 else 's'} and **{user_data.get('grist', 0)}** Grist left.\nUse it with **/roll**.", ephemeral=True)
+        await interaction.followup.send(f"You bought {what} for **{price}** Grist! You have **{rolls}** roll{'' if rolls == 1 else 's'} and **{user_data.get('grist', 0)}** Grist left.\nUse it with **/roll**.", ephemeral=True)
 
     async def on_timeout(self):
         # grey out the buttons once the store has been open for 3 minutes
@@ -997,42 +1053,96 @@ class View(discord.ui.View):
     async def no_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
 
+class PickView(discord.ui.View):
+    """A menu to pick 1 character from (/recycle uses it when more than 1 of the user's characters match)."""
+    def __init__(self, options):
+        super().__init__()
+        self.pick_menu.options = options
+
+    @discord.ui.select(placeholder="Pick which one to recycle", custom_id="pick_menu")
+    async def pick_menu(self, interaction: discord.Interaction, select: discord.ui.Select):
+        await interaction.response.defer()
+
 #Recycle Command
 @bot.tree.command()
-@app_commands.choices(character_name=character_choices)
-async def recycle(ctx: discord.Interaction, character_name: app_commands.Choice[str], amount: int):
+@app_commands.rename(char_type="type")
+@app_commands.describe(character="Which character to recycle", rarity="Only this rarity (leave it empty to pick from every rarity)", amount="How many to recycle",
+                       char_type="The 1 card to recycle (leave it empty to pick from a menu if more than 1 match)")
+@app_commands.choices(character=character_group_choices, rarity=rarity_choices)
+@app_commands.autocomplete(char_type=char_type_autocomplete)
+async def recycle(ctx: discord.Interaction, character: app_commands.Choice[str], amount: int, rarity: app_commands.Choice[str] = None, char_type: str = None):
     # SSR = 100 points to counter, SR = 5 points to counter, R = 1 point to counter
     # 10 r's for 1 roll, 2 sr for 2 rolls and 1 ssr for 10 rolls
     # if counter = 10 inside mongodb per user then give 1 roll otherwise update and tell user to recycle more
     """Recycle Characters for Rolls"""
-    # Example: /recycle r_abraize 10
-    # then show embed saying "Would you like to recycle" [character_name] x [amount], "you will gain [calculated rolls] rolls" (calculated rolls may be in decimal format for example if they recycle 15 r's then it will say 1.5 rolls)
-
-    # Get the character dev name from the choice value
-    char_dev_name = character_name.value
-    char_title = character_name.name
+    # Example: /recycle abraize 10 R
+    # then show embed saying "Would you like to recycle" [character] x [amount], "you will gain [calculated rolls] rolls" (calculated rolls may be in decimal format for example if they recycle 15 r's then it will say 1.5 rolls)
 
     # a 0 or negative amount used to give the user free characters instead of taking them away
     if amount < 1:
-        await ctx.response.send_message("You have to recycle at least **1** character.")
+        await ctx.response.send_message("You have to recycle at least **1** character.", ephemeral=True)
         return
+
+    # Every version of the character (only the chosen rarity if one was picked), same as /char
+    char_dev_names = [char for char in character_groups[character.value] if rarity is None or getRarity(char) == rarity.value]
+    if not char_dev_names:
+        await ctx.response.send_message(f"**{character.name}** has no **{rarity.value}** characters!", ephemeral=True)
+        return
+
+    # Only the 1 card picked in type (the menu gives its dev name, typing the full title out works too), same as /char
+    if char_type is not None:
+        char_dev_names = [char for char in char_dev_names if char_type.strip().lower() in (char, characterTitles[char].lower())]
+        if not char_dev_names:
+            typed = discord.utils.escape_mentions(discord.utils.escape_markdown(char_type[:100]))
+            rarity_text = f" **{rarity.value}**" if rarity else ""
+            await ctx.response.send_message(f"**{typed}** is not one of **{character.name}'s**{rarity_text} cards! Pick one from the **type** menu.", ephemeral=True)
+            return
+
+    async def send(**message):
+        """The first message answers the command, after the pick menu it replaces the menu instead."""
+        if ctx.response.is_done():
+            await ctx.edit_original_response(content=message.get("content"), embed=message.get("embed"), view=message.get("view"))
+        else:
+            await ctx.response.send_message(**message, ephemeral=True)
 
     user_data = inventory_collection.find_one({"user_id": ctx.user.id})
     if user_data:
         inventory = user_data.get("inventory", {})
-        char_count = inventory.get(char_dev_name, 0)
+        owned = [char for char in char_dev_names if inventory.get(char, 0) >= 1]
 
         # Check if user owns the character
-        if char_count < 1:
-            if char_dev_name == "sssr_max":
+        if not owned:
+            if "sssr_max" in char_dev_names:
                 embed = discord.Embed(title="You Can't Recycle What You Don't Know", color=0x000000)
-                await ctx.response.send_message(embed=embed)
+                await ctx.response.send_message(embed=embed, ephemeral=True)
                 await asyncio.sleep(2)
                 await ctx.delete_original_response()
                 return
-            await ctx.response.defer()
-            await ctx.followup.send(file=discord.File(otherImages["no_own_png"]))
+            await ctx.response.defer(ephemeral=True)
+            await ctx.followup.send(file=discord.File(otherImages["no_own_png"]), ephemeral=True)
             return
+
+        # More than 1 match (like Abraize's 2 R's) and no type was picked, so the user picks which one from a menu
+        char_dev_name = owned[0]
+        if len(owned) > 1:
+            options = [discord.SelectOption(label=characterTitles.get(char, char)[:100], value=char, description=f"{getRarity(char)}, you have x{inventory[char]}")
+                       for char in owned[:25]]
+            await ctx.response.send_message(f"Which **{character.name}** do you want to recycle **x{amount}** of?", view=PickView(options), ephemeral=True)
+            menu = await ctx.original_response()
+
+            def picked(interaction: discord.Interaction):
+                return (interaction.user.id == ctx.user.id
+                        and interaction.message is not None and interaction.message.id == menu.id
+                        and (interaction.data or {}).get("custom_id") == "pick_menu")
+            try:
+                pick = await bot.wait_for("interaction", check=picked, timeout=30.0)
+            except asyncio.TimeoutError:
+                await send(content="Recycling timed out. Please try again.")
+                return
+            char_dev_name = pick.data["values"][0]
+
+        char_title = characterTitles.get(char_dev_name, char_dev_name)
+        char_count = inventory.get(char_dev_name, 0)
 
         if char_count >= amount:
             # Determine points based on character rarity (specialChar characters are SSR too)
@@ -1043,7 +1153,7 @@ async def recycle(ctx: discord.Interaction, character_name: app_commands.Choice[
             elif char_dev_name in rChar:
                 points = 1 * amount
             else:
-                await ctx.response.send_message(f"Character **{char_title}** does not exist!")
+                await send(content=f"Character **{char_title}** does not exist!")
                 return
 
             # Calculate rolls to add
@@ -1054,7 +1164,7 @@ async def recycle(ctx: discord.Interaction, character_name: app_commands.Choice[
 
             # embed awaiting user confirmation by button click yes or no to recycle or not
             embed = discord.Embed(title=f"Would you like to recycle {char_title} x {amount}? ", color=0x3f48cc)
-            await ctx.response.send_message(embed=embed, view=View())
+            await send(embed=embed, view=View())
             prompt = await ctx.original_response()
 
             # if view is custom id of yes button then proceed with recycling
@@ -1091,7 +1201,7 @@ async def recycle(ctx: discord.Interaction, character_name: app_commands.Choice[
                         }
                     )
                     if recycled.modified_count == 0:
-                        await ctx.followup.send(f"You no longer have enough **{char_title}'s** to recycle **x{amount}**.")
+                        await ctx.followup.send(f"You no longer have enough **{char_title}'s** to recycle **x{amount}**.", ephemeral=True)
                         await ctx.edit_original_response(view=None)
                         return
 
@@ -1109,19 +1219,19 @@ async def recycle(ctx: discord.Interaction, character_name: app_commands.Choice[
                   #  if rolls_to_add == 0:
                     embed = discord.Embed(title=f"Recycled **{char_title} x{amount}**. Your total rolls is **{updated_user_data.get('rolls', 0)}** rolls.", color=0x3f48cc)
                     embed.set_image(url=otherImages["recycle_gif"])
-                    await ctx.followup.send(embed=embed)
+                    await ctx.followup.send(embed=embed, ephemeral=True)
                 else:  # no_button pressed
-                    await ctx.followup.send("Recycling cancelled.")
+                    await ctx.followup.send("Recycling cancelled.", ephemeral=True)
             except asyncio.TimeoutError:
-                await ctx.followup.send("Recycling timed out. Please try again.")
+                await ctx.followup.send("Recycling timed out. Please try again.", ephemeral=True)
             # take the Yes / No buttons away once they've been answered or timed out
             await ctx.edit_original_response(view=None)
 
 
         else:
-            await ctx.response.send_message(f"You do not have enough **{char_title}'s** to recycle **x{amount}**. You currently have **x{char_count}**.")
+            await send(content=f"You do not have enough **{char_title}'s** to recycle **x{amount}**. You currently have **x{char_count}**.")
     else:
-        await ctx.response.send_message(f"{ctx.user.mention} No inventory data found. Please contact an Admin immediately.")
+        await ctx.response.send_message(f"{ctx.user.mention} No inventory data found. Please contact an Admin immediately.", ephemeral=True)
 
 @bot.tree.command()
 async def viewteam(ctx: discord.Interaction):
@@ -1367,7 +1477,7 @@ def calculate_character_position(char_name, slot_index, background_size):
 # ============================================================================
 # battle.py does all of the battle logic, this part only shows it to the user:
 #   - the embed shows everyone's hp, their buffs/debuffs and the battle log (updated after every turn)
-#   - the buttons are the current character's abilities, target buttons (Options F / G) and Retreat
+#   - the buttons are the current character's abilities, target buttons (Options F / G), Skip and Retreat
 
 BATTLE_TIMEOUT = 300  # seconds without a button press before the battle ends by itself
 
@@ -1455,7 +1565,7 @@ class BattleView(discord.ui.View):
         self.show_ability_buttons()
 
     def show_ability_buttons(self):
-        """Row 1: the current character's abilities (greyed out while on cooldown), row 2: Retreat."""
+        """Row 1: the current character's abilities (greyed out while on cooldown), row 2: Skip and Retreat."""
         self.layout += 1
         self.clear_items()
         for index, ability in enumerate(getAbilityButtons(self.user_id)):
@@ -1466,7 +1576,7 @@ class BattleView(discord.ui.View):
         self.add_retreat_button()
 
     def show_target_buttons(self, ability_index, targets):
-        """Options F / G: one button per possible target, plus Back and Retreat."""
+        """Options F / G: one button per possible target, plus Back, Skip and Retreat."""
         self.layout += 1
         self.clear_items()
         for unit, name in targets:
@@ -1479,6 +1589,10 @@ class BattleView(discord.ui.View):
         self.add_retreat_button()
 
     def add_retreat_button(self):
+        # Skip goes right before Retreat so it sits directly to its left
+        skip = discord.ui.Button(label="Skip", style=discord.ButtonStyle.success, row=1)
+        skip.callback = self.skip_pressed(self.layout)
+        self.add_item(skip)
         retreat = discord.ui.Button(label="Retreat", style=discord.ButtonStyle.danger, row=1)
         retreat.callback = self.retreat_pressed
         self.add_item(retreat)
@@ -1522,6 +1636,14 @@ class BattleView(discord.ui.View):
                 return
             self.show_ability_buttons()
             await interaction.response.edit_message(embed=build_battle_embed(self.user_id, self.enemy_name), view=self)
+        return callback
+
+    def skip_pressed(self, layout):
+        async def callback(interaction: discord.Interaction):
+            if not await self.check_press(interaction, layout):
+                return
+            # an Option Z move: only the current character's action is skipped, then the battle carries on like after any move
+            await self.take_turn(interaction, "skip", None)
         return callback
 
     async def retreat_pressed(self, interaction: discord.Interaction):
@@ -1730,34 +1852,6 @@ HELP_GIF_URL = "https://media.discordapp.net/attachments/796742546910871562/1442
 async def help_command(ctx):
     """Show Help"""
     await ctx.response.send_message(HELP_GIF_URL)
-
-@bot.tree.command(name="embedtest")
-async def embed_test(ctx: discord.Interaction):
-    """Test Embed"""
-    embed = discord.Embed(
-        title="Test Embed",
-        description="This is a test embed. " + "x" * 400,  # Max description length
-        color=0x00ff00,
-        url="https://discord.com"
-    )
-
-    # Add maximum fields (25 is the limit)
-    for i in range(1, 26):
-        embed.add_field(
-            name=f"Field {i}: " + "x" * 25,
-            value="This is the value for field " + str(i) + ". " + "y" * 100,
-            inline=False if i % 2 == 0 else True
-        )
-
-    embed.set_author(name="Author Name " + "z" * 20, url="https://discord.com", icon_url="https://cdn.discordapp.com/embed/avatars/0.png")
-    embed.set_thumbnail(url="https://cdn.discordapp.com/embed/avatars/0.png")
-    embed.set_image(url="https://cdn.discordapp.com/embed/avatars/0.png")
-    embed.set_footer(text="This is a footer. " + "f" * 200, icon_url="https://cdn.discordapp.com/embed/avatars/0.png")
-
-    # Add timestamp
-    embed.timestamp = discord.utils.utcnow()
-
-    await ctx.response.send_message(embed=embed)
 
 @bot.command()
 async def syncapp(ctx: commands.Context) -> None:

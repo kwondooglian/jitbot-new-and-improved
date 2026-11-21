@@ -93,7 +93,7 @@ from item_helper import add_item   # leave this line alone
 add_item(
     name = "Agent Knife",
     price = 35,
-    description = "A knife taken off a Dersite agent. Light, sharp and easy to dodge with.",
+    description = "The Dersite solo agent's trusty knife. Light, sharp, and easy to dodge with.",
     emoji = "🔪",
     image = "graphics/items/agentknife.png",
     effect = "stat_percent",
@@ -106,7 +106,7 @@ add_item(
 add_item(
     name = "Dersite Enforcer Hat",
     price = 50,
-    description = "An enforcer's cap. Somehow it makes the whole team tougher.",
+    description = "Large cap of the Dersite Grunt. Gives off a menacing aura.",
     emoji = "🧢",
     image = "graphics/items/grunthat.png",
     effect = "stat_percent",
@@ -130,7 +130,7 @@ add_item(
 add_item(
     name = "Lucky Coin",
     price = 30,
-    description = "Flip it before a fight. Every now and then a hit lands extra hard.",
+    description = "How did you get your hands on this?",
     emoji = "🪙",
     image = "graphics/items/luckycoin.png",
     effect = "crit_chance",
@@ -143,7 +143,7 @@ add_item(
 add_item(
     name = "Perfectly Generic Object",
     price = 5,
-    description = "It's perfectly generic. It helps a little, for a little while.",
+    description = "It's perfectly generic.",
     emoji = "📦",
     image = "graphics/items/perfectlygenericobject.png",
     effect = "temp_stat_flat",
@@ -160,7 +160,7 @@ add_item(
 add_item(
     name = "Bag of Purina Treats",
     price = 45,
-    description = "A snack break every few turns keeps the team going.",
+    description = "Dog treats to brighten your day and make you yip with joy.",
     emoji = "🦴",
     image = "graphics/items/treats.png",
     effect = "periodic_heal",
@@ -173,7 +173,7 @@ add_item(
 add_item(
     name = "Dersite Knuckledusters",
     price = 20,   # nobody has picked a price for this one yet, change it to what you want
-    description = "Brass knuckles from Derse. They steady your aim.",
+    description = "Crack skulls with these Dersite Enforcer's knuckledusters!",
     emoji = "👊",
     image = "graphics/items/dersiteknuckleduster.png",
     effect = "stat_percent",

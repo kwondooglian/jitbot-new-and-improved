@@ -148,6 +148,9 @@ gristRewards = {
 
 # How much Grist 1 roll costs in /item store (a whole number above 0)
 rollPrice = 15
+# The 10 rolls deal in /item store: how many rolls it gives and how much Grist it costs (whole numbers above 0)
+rollBundleAmount = 10
+rollBundlePrice = 135
 # Only Get the 5 stats from here (abilities are defined in characterAbilities)
 # HP, Attack, Defense, Evasion, Accuracy, Abilities
 characterAttributes = {
@@ -164,7 +167,7 @@ characterAttributes = {
     "sr_freeman": [180, 8, 8, 10, 90, "Pistol Whip", "Shoot", "Hide"],
     "r_stephen": [130, 9, 8, 3, 90, "Dropkick", "Light up", "Lock the fuck in"],
     "sr_stephen": [180, 9, 8, 3, 90, "Dropkick", "Consider Intervening", "HIYAAAHHH!"],
-    "ssr_jayden": [400, 30, 30, 5, 90, "Punch", "Butler of Swatabi", "Indecision", "Genesis"],
+    "ssr_jayden": [400, 30, 30, 5, 90, "Distort", "Butler of Swatabi", "Indecision", "Genesis"],
     "sr_homestuck": [180, 18, 15, 5, 90, "Impractical Assailants", "Plunder", "Thief"],
     "ssr_scottie": [320, 40, 40, 5, 90, "Fated Strike", "Existential Dread", "Martyrdom", "Nihilism"],
     "r_homestuck": [140, 11, 7, 5, 90, "Punch", "Spotlight Shift", "Rules for thee"],
@@ -242,7 +245,7 @@ characterAttributes = {
 # OPtion W = Future Boss Special Reserved
 # Option X = reserved
 # Option Y = reserved
-# Option Z = Skip Move (For Dev)
+# Option Z = Skip Move (For Dev, the Skip button in /battle uses it too), "skipText" = what the battle log says
 
 # Other numbers any move can have
 #   "turns" = how long buffs/debuffs last (default 1, 0 = only for the rest of the current turn)
@@ -265,6 +268,9 @@ characterAttributes = {
 #   DD = Accuracy -> added straight onto the percentage (90% accuracy with DD +10 = 100%)
 #   EE = Evasion  -> added straight onto the percentage
 statNames = {"AA": "HP", "BB": "ATK", "CC": "DEF", "DD": "ACC", "EE": "EVA"}
+
+# The Skip button in /battle: an Option Z move, so the current character does nothing and the next one goes
+skipMove = ['Z', {"skipText": "and stood idle, boggling vacantly at the enemy"}]
 
 # Abilities Moveset + Options for abilities (what every move does is written in the /char embeds in main.py)
 characterAbilities = {
@@ -293,7 +299,7 @@ characterAbilities = {
                                                                       "perStack": {"BB": 10}, "resetOnOtherMove": True}}],
     # +5% acc, +40% atk, +15% def for the team for 1 turn and you go again straight away, 5 turn cooldown
     "Fast Forward": ['C', 'D', 'H', {"buff": {"DD": 5, "BB": 40, "CC": 15}, "turns": 1, "extraTurn": True, "cooldown": 5}],
-    "Rewind": ['H', 'J', {"cooldown": 2}],                          # Team goes back to how it was last turn, 2 turn cooldown
+    "Rewind": ['H', 'J', {"cooldown": 3}],                          # Team goes back to how it was last turn, 3 turn cooldown
     # Ultimate: the team can't be debuffed, +50% atk for 5 turns and everyone is healed to full, once per battle
     "Universal Stabilizer": ['C', 'D', {"buff": {"BB": 50}, "turns": 5, "debuffImmune": True, "heal": 100, "once": True}]
   },
@@ -352,20 +358,20 @@ characterAbilities = {
   "sr_stephen": {
     "Dropkick": ['A', 'F'],                                         # Flat Damage using Attack Stat
     "Consider Intervening": ['I', {"stacks": {"name": "Considering", "add": 1, "turns": 3}}],  # +1 Considering stack (lasts 3 turns)
-    "HIYAAAHHH!": ['A', 'F', 'I', {"consumeStacks": {"name": "Considering", "flatPerStack": 10}}]  # +10 damage per stack, uses them up
+    "HIYAAAHHH!": ['A', 'F', 'I', {"consumeStacks": {"name": "Considering", "flatPerStack": 15}}]  # +15 damage per stack, uses them up
   },
   "ssr_jayden": {
-    "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
-    "Butler of Swatabi": ['B', 'E', {"debuff": {"DD": 30}, "turns": 2}],  # -30% accuracy to all enemies for 2 turns
+    "Distort": ['A', 'B', {"power": 50}],                           # 50% of atk as damage to all enemies (less damage since it hits all of them)
+    "Butler of Swatabi": ['B', 'E', 'H', {"debuff": {"DD": 30}, "turns": 2, "cooldown": 2}],  # -30% accuracy to all enemies for 2 turns, 2 turn cooldown
     # 1/3: +20% atk and def for the team, 1/3: -20% atk and def to all enemies, 1/3: lose 1 hp
     "Indecision": ['O', {"outcomes": [
       ['C', 'D', {"buff": {"BB": 20, "CC": 20}, "turns": 2}],
       ['B', 'E', {"debuff": {"BB": 20, "CC": 20}, "turns": 2}],
       [{"selfDamage": 1}]
     ]}],
-    # Ultimate: Regeneration (5% hp every turn) for the team and Warped (-25% acc, -35% max hp, -25% def) on all enemies for 7 turns
+    # Ultimate: Regeneration (5% hp every turn) for the team and Warped (-25% acc, -35% max hp, -25% def) on all enemies for 5 turns
     "Genesis": ['B', 'C', 'E', 'M', {"lingering": {"name": "Regeneration", "percent": 5, "turns": 7, "heal": True},
-                                     "debuff": {"DD": 25, "AA": 35, "CC": 25}, "debuffName": "Warped", "turns": 7, "once": True}]
+                                     "debuff": {"DD": 25, "AA": 35, "CC": 25}, "debuffName": "Warped", "turns": 5, "once": True}]
   },
   "sr_homestuck": {
     "Impractical Assailants": ['A', 'F', 'O', {"dice": [6, 10]}],  # Roll a die, 10 damage for every number rolled
@@ -380,8 +386,8 @@ characterAbilities = {
     # All enemies: -(15% + 7.5% per Doom Mark) atk and -(20% + 5% per Doom Mark) acc for 3 turns, uses up the marks
     "Existential Dread": ['B', 'E', 'P', {"doom": "dread", "debuff": {"BB": 15, "DD": 20}, "perMark": {"BB": 7.5, "DD": 5}, "turns": 3}],
     # Enemies have to attack you and you take 30% less damage for 2 turns, every hit you take gives the attacker a Doom Mark
-    # If you get knocked out during it, every Doom Mark explodes for 150% of your atk
-    "Martyrdom": ['D', 'L', 'P', {"buff": {"CC": 30}, "turns": 2, "taunt": 2, "doom": "martyrdom", "explodePower": 150}],
+    # If you get knocked out during it, every Doom Mark explodes for 150% of your atk, 2 turn cooldown
+    "Martyrdom": ['D', 'H', 'L', 'P', {"buff": {"CC": 30}, "turns": 2, "taunt": 2, "doom": "martyrdom", "explodePower": 150, "cooldown": 2}],
     # Ultimate: from turn 4 with 5+ Doom Marks out, for 3 turns every enemy hurts itself, hits an ally or lies still each turn
     "Nihilism": ['B', 'P', {"doom": "nihilism", "requiresRound": 4, "requiresMarks": 5, "turns": 3, "once": True}]
   },
@@ -403,12 +409,12 @@ characterAbilities = {
     "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
     # throw a box at the enemy you pick (ranged), what's inside decides the damage, "weights" = the % chance of each box
     "Pick Up": ['F', 'O', {"weights": [15, 15, 30, 20, 19, 1], "outcomes": [
-      ['A', 'F', {"damage": 1, "ranged": True, "outcomeText": "the box had a teddy bear."}],
-      ['A', 'F', {"damage": 15, "ranged": True, "outcomeText": "the box had a lovely vase."}],
-      ['A', 'F', {"damage": 10, "ranged": True, "outcomeText": "the box had school supplies."}],
-      ['A', 'F', {"damage": 15, "ranged": True, "outcomeText": "the box had a precious game console."}],
-      ['A', 'F', {"damage": 2, "ranged": True, "outcomeText": "the box had rolled up posters."}],
-      ['A', 'F', {"damage": 50, "ranged": True, "outcomeText": "the box had a live beartrap."}]
+      ['A', 'F', {"damage": 1, "ranged": True, "outcomeText": "the box had a teddy bear"}],
+      ['A', 'F', {"damage": 15, "ranged": True, "outcomeText": "the box had a lovely vase"}],
+      ['A', 'F', {"damage": 10, "ranged": True, "outcomeText": "the box had school supplies"}],
+      ['A', 'F', {"damage": 15, "ranged": True, "outcomeText": "the box had a precious game console"}],
+      ['A', 'F', {"damage": 2, "ranged": True, "outcomeText": "the box had rolled up posters"}],
+      ['A', 'F', {"damage": 50, "ranged": True, "outcomeText": "the box had a live beartrap"}]
     ]}],
     # pick a teammate: every attack they make on their next turn is guaranteed to hit
     "Commitment and Fuck": ['D', 'G', {"sureHitsNextTurn": "Committed"}]

@@ -36,7 +36,6 @@
 
 ## A Few Final Notes:
  - You can always run /syncapp which will reset everything and fix any weird synchronization issues. Dont forget to reload Discord [CTRL + R] after running this command as the client needs a refresh too!
- - /embedtest is a nightmare command that shows literally most maximum possible functions of discord embeds and will be removed soon and if i dont remove it you can remove it yourself
  - All gifs pertaining to /char have to be taken from a web link so sadly can't be stored locally (it is possible but discord doesn't like it so unless an issue is ran into then they will stay like that) --> this means you can't view them without running the bot and running the command
  - Battle.py is where all the battle logic SHOULD go --> Main.py asks stuff of battle.py to do and it does all LOGIC
  - Utils.py is a beautiful simple python file that stores pure data and can be referenced from Battle.py or main.py
@@ -106,6 +105,7 @@ Players earn Grist by **winning** a /battle. Losing, retreating or letting the b
 | Jack Noir | 35 |
 
 Players can spend Grist on items, or on rolls with the **Buy a Roll** button in /item store. A roll costs 15 Grist and they can buy as many as they like. To change the price, edit **rollPrice** in utils.py and restart the bot.
+The **Buy 10 Rolls** button gives 10 rolls for 135 Grist, also as many times as they like. To change it, edit **rollBundleAmount** and **rollBundlePrice** in utils.py and restart the bot.
 
 To change the battle amounts, edit **gristRewards** in utils.py (search for it with CTRL + F) and restart the bot. A new enemy needs a line there too, otherwise beating it gives 0 Grist and the console says so.
 
@@ -172,7 +172,7 @@ Good to know:
  - Numbers have to be saved as numbers. If Compass shows a number in quotes, its type is String: click the type next to the value and change it to **Int32** (or **Double** for numbers like 1.5).
  - Don't rename an item that people already own. Players' items are saved by name, so they would lose it.
  - A brand-new kind of effect (something none of the effects above can do) needs code in item_helper.py and battle.py first.
- - The store can show up to 24 items, because Discord allows 25 buttons and one of them is Buy a Roll.
+ - The store can show up to 23 items, because Discord allows 25 buttons and two of them are Buy a Roll and Buy 10 Rolls.
 
 ## Daily rewards
 Players can use **/daily** once every 24 hours. Every claim moves them one day along a 7 day streak, and after day 7 it starts again at day 1. If more than 48 hours pass between two claims, the streak breaks and they go back to day 1. Every /daily reply is only visible to the player who used it.

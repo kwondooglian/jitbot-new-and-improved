@@ -65,7 +65,7 @@ def startBattle(discordID, team, enemies, item=None):
 def advanceBattle(discordID, abilityUsed, target=None):
   # once everything with configuration is finished then startBattle will end and return with first character on team abilities
   # then if any button is pressed from main.py that isnt retreat it should call advanceBattle
-  # abilityUsed = which ability button (0 = Ab1 up to 2, 3 = ult), target = unit picked for Option F / G (None = picked automatically)
+  # abilityUsed = which ability button (0 = Ab1 up to 2, 3 = ult, "skip" = the Skip button), target = unit picked for Option F / G (None = picked automatically)
   # it does all the calculations and updates all the stored data for that battle (hp, buffs/debuffs, cooldowns)
   # then it returns the abilities for the next character in the turn order (None once the battle is over)
   if not battleExists(discordID) or battleInfo[discordID]['result']:
@@ -74,17 +74,22 @@ def advanceBattle(discordID, abilityUsed, target=None):
   actor = whosTurn[discordID]
   abilities = allAbilities[discordID]['players'][actor]
   abilityNames = list(abilities.keys())
-  if abilityUsed is None or not 0 <= abilityUsed < len(abilityNames):
-    print("Invalid ability", abilityUsed, "for", actor)
-    return abilities
-  abilityName = abilityNames[abilityUsed]
-  ready, reason = abilityStatus(discordID, 'players', actor, abilityName)
-  if not ready:
-    print(f"{actor} can't use {abilityName} right now ({reason})")
-    return abilities
+  if abilityUsed == "skip":
+    # the Skip button: skipMove in utils.py (Option Z), only this character's action is skipped
+    abilityName, options = "Skip", skipMove
+  else:
+    if abilityUsed is None or not 0 <= abilityUsed < len(abilityNames):
+      print("Invalid ability", abilityUsed, "for", actor)
+      return abilities
+    abilityName = abilityNames[abilityUsed]
+    ready, reason = abilityStatus(discordID, 'players', actor, abilityName)
+    if not ready:
+      print(f"{actor} can't use {abilityName} right now ({reason})")
+      return abilities
+    options = abilities[abilityName]
 
   print(f"Round {battleInfo[discordID]['round']}: {actor} used {abilityName}" + (f" on {target}" if target else ""))
-  extraTurn = optionChecks(discordID, 'players', actor, abilityName, abilities[abilityName], target)
+  extraTurn = optionChecks(discordID, 'players', actor, abilityName, options, target)
 
   if checkBattleOver(discordID):
     return None
@@ -103,13 +108,13 @@ def endBattle(discordID, reason):
   # 3 == reason is the battle timed out (nobody pressed a button)
   # 4 == reason is something broke
   if 0 == reason:
-    print("User", discordID, "has retreated from battle")
+    print("User", discordID, "has retreated.")
   elif 1 == reason:
-    print("User", discordID, "has been defeated in battle")
+    print("User", discordID, "has failed.")
   elif 2 == reason:
-    print("User", discordID, "has won the battle")
+    print("User", discordID, "is victorious!")
   elif 3 == reason:
-    print("User", discordID, "battle timed out")
+    print("User", discordID, "waited too long")
   else:
     print("Error with battle: ", discordID)
   print("Battle ended with user, now cleanup for ", discordID)
@@ -376,7 +381,7 @@ def resolveMove(discordID, move, letters, params, chosenTarget):
 
   # Option Z: skip move (for dev)
   if 'Z' in letters:
-    parts.append("but nothing happened (this move isn't finished yet)")
+    parts.append(params.get('skipText', "but nothing happened (this move isn't finished yet)"))
     return False
 
   # costs / gains for the user

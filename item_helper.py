@@ -67,7 +67,7 @@ ALL_FIELDS = REQUIRED_FIELDS + OPTIONAL_FIELDS + list(STAT_FIELDS) + list(NUMBER
 UNEQUIP_WORDS = ["unequip", "nothing", "none", "empty"]
 
 SHOP_IMAGE = os.path.join(BOT_FOLDER, "graphics", "shop.png")  # the picture in /item store
-MAX_STORE_ITEMS = 24  # Discord allows 25 buttons on 1 message, and 1 of them is the Buy a Roll button
+MAX_STORE_ITEMS = 23  # Discord allows 25 buttons on 1 message, and 2 of them are the Buy a Roll and Buy 10 Rolls buttons
 
 _items = []  # the items that passed the checks (main.py and battle.py both use this list)
 
@@ -79,11 +79,11 @@ _items = []  # the items that passed the checks (main.py and battle.py both use 
 # the bot copies these into it once. After that the items in MongoDB are the real ones and editing this list does nothing.
 STARTING_ITEMS = [
     {"name": "Agent Knife", "price": 35,
-     "description": "A knife taken off a Dersite agent. Light, sharp and easy to dodge with.",
+     "description": "The Dersite solo agent's trusty knife. Light, sharp, and easy to dodge with.",
      "emoji": "🔪", "image": "graphics/items/agentknife.png",
      "effect": "stat_percent", "attack": 5, "evasion": 10},
     {"name": "Dersite Enforcer Hat", "price": 50,
-     "description": "An enforcer's cap. Somehow it makes the whole team tougher.",
+     "description": "Large cap of the Dersite Grunt. Gives off a menacing aura.",
      "emoji": "🧢", "image": "graphics/items/grunthat.png",
      "effect": "stat_percent", "defense": 5},
     {"name": "Dersite Longman's Spear", "price": 50,
@@ -91,28 +91,28 @@ STARTING_ITEMS = [
      "emoji": "🔱", "image": "graphics/items/spearmanspear.png",
      "effect": "stat_percent", "accuracy": 15},
     {"name": "Lucky Coin", "price": 30,
-     "description": "Flip it before a fight. Every now and then a hit lands extra hard.",
+     "description": "How did you get your hands on this?",
      "emoji": "🪙", "image": "graphics/items/luckycoin.png",
      "effect": "crit_chance", "chance": 2, "multiplier": 1.5},
     {"name": "Perfectly Generic Object", "price": 5,
-     "description": "It's perfectly generic. It helps a little, for a little while.",
+     "description": "It's perfectly generic.",
      "emoji": "📦", "image": "graphics/items/perfectlygenericobject.png",
      "effect": "temp_stat_flat", "hp": 1, "attack": 1, "defense": 1, "evasion": 1, "accuracy": 1, "turns": 3},
     {"name": "Bag of Purina Treats", "price": 45,
-     "description": "A snack break every few turns keeps the team going.",
+     "description": "Dog treats to brighten your day and make you yip with joy.",
      "emoji": "🦴", "image": "graphics/items/treats.png",
      "effect": "periodic_heal", "every": 5, "percent": 5},
     {"name": "Dersite Knuckledusters", "price": 20,
-     "description": "Brass knuckles from Derse. They steady your aim.",
+     "description": "Crack skulls with these Dersite Enforcer's knuckledusters!.",
      "emoji": "👊", "image": "graphics/items/dersiteknuckleduster.png",
      "effect": "stat_percent", "accuracy": 5},
     {"name": "Protein Brick", "price": 75,
-     "description": "Packed with protein and very, very hard. Great for gains, terrible for your head.",
+     "description": "Its structure, while prismatic, is completely unknowable.",
      "emoji": "🧱", "image": "graphics/items/proteinbrick.png",
      "effect": "stat_percent", "attack": 50, "skip_chance": 50,
-     "skip_text": "Your team hit themselves in the head with the Protein Brick! 🤕 They're too dazed to do anything this turn."},
+     "skip_text": "It was sour, everyone nurses their horrified stomachs this turn."},
     {"name": "Knife Noir", "in_store": False, "drop_from": "Jack Noir", "drop_chance": 10,
-     "description": "Jack Noir's own knife, taken from him after a hard fight. Every basic attack leaves a cut.",
+     "description": "Jack Noir's own knife, taken from him after a hard fight. Afflict bleed via stabbing during every basic attack.",
      "emoji": "🗡️", "image": "graphics/items/knifenoir.png",
      "effect": "basic_attack_bleed", "percent": 3, "turns": 1},
 ]
