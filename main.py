@@ -272,6 +272,20 @@ def sr_noahEmbed():
     embed.add_field(name=characterAttributes["sr_noah"][7], value="Make all team members immune to damage for this turn. Cannot be used again for 3 turns.", inline=False)
     return embed
 
+def sr_binktopEmbed():
+    embed = discord.Embed(title=characterTitles["sr_binktop"], description="Binktop", color=0x3f48cc)
+    if SR_BINKTOP_GIF:  # empty until the gif link is added in utils.py
+        embed.set_image(url=SR_BINKTOP_GIF)
+    embed.add_field(name="HP:", value=characterAttributes["sr_binktop"][0], inline=True)
+    embed.add_field(name="ATK:", value=characterAttributes["sr_binktop"][1], inline=True)
+    embed.add_field(name="DEF:", value=characterAttributes["sr_binktop"][2], inline=True)
+    embed.add_field(name="EVA:", value=characterAttributes["sr_binktop"][3], inline=True)
+    embed.add_field(name="ACC:", value=characterAttributes["sr_binktop"][4], inline=True)
+    embed.add_field(name=characterAttributes["sr_binktop"][5], value="Swipe two times with your trusty Virusword, with each swipe dealing 75% of your atk stat, but having a 15% chance of applying \"Code Rot\" (-10% atk for 2 turns) to the enemy!", inline=False)
+    embed.add_field(name=characterAttributes["sr_binktop"][6], value="Hold up your shield and ready yourself to parry, you may also choose an ally to defend, gaining a 75% def boost for this turn. If an attack lands on Binktop during his parry, automatically activate Viruslash on whichever enemy landed the hit. Cannot be used for another 3 turns.", inline=False)
+    embed.add_field(name=characterAttributes["sr_binktop"][7], value="Binktop channels his full McAfee Virus Protection Power into his sword for 2 turns. If he is hit, his focus is lost, and the power is lost. If allowed to channel for 2 turns, Binktop unleashes a devastating slash, dealing 265 damage + 7.5% max hp damage to an enemy. After this, Binktop is stunned for one turn. Cannot be used for another 6 turns.", inline=False)
+    return embed
+
 def r_homestuckEmbed():
     embed = discord.Embed(title=characterTitles["r_homestuck"], description="Homestuck", color=0x3f48cc)
     if R_HOMESTUCK_GIF:  # empty until the gif link is added in utils.py
@@ -655,6 +669,8 @@ def character_embed(char_dev_name):
         embed = r_maxEmbed()
     elif char_dev_name == "r_jaiden":
         embed = r_jaidenEmbed()
+    elif char_dev_name == "sr_binktop":
+        embed = sr_binktopEmbed()
     elif char_dev_name == "sssr_max":
         embed = sssr_maxEmbed()
     else:
@@ -1390,6 +1406,7 @@ characterFeet = {
     "r_homestuck": (66, 239),
     "r_max": (66, 220),
     "r_jaiden": (49, 257),
+    "sr_binktop": (88, 175),  # the foot he stands on (the other leg is drawn further back)
 }
 
 # Special Y-axis adjustments for floating characters
@@ -1409,6 +1426,42 @@ teamSlotGroundPositions = [
     (580, 360),  # Index 2 (Slot 3 in /viewteam) - Right
     (440, 340),  # Index 3 (Slot 4 in /viewteam) - Up
 ]
+
+def draw_battle_screen(user_id, scene_base, team, summoned=()):
+    """The battle picture: the background with the starting enemies (scene_base), then the summoned enemies that are
+    still standing (Garry's Mod's Addonshields, in their summonSpots from utils.py), then the team in front.
+    Saved as battle_screen_<user id>.png, the path is returned."""
+    image = scene_base.copy()
+    background_size = image.size
+
+    # summoned enemies, the ones further back (higher up) first so the closer ones get drawn over them
+    placed = []
+    for kind, slot in summoned:
+        layout = summonSpots.get(kind)
+        if layout and os.path.exists(enemyImages.get(kind, "")):
+            placed.append((layout["spots"][slot % len(layout["spots"])], kind, layout.get("scale", 1)))
+    for spot, kind, scale in sorted(placed, key=lambda place: place[0][1]):
+        summon_image = Image.open(enemyImages[kind])
+        if scale != 1:
+            summon_image = summon_image.resize((round(summon_image.width * scale), round(summon_image.height * scale)), Image.LANCZOS)
+        image.paste(summon_image, spot, summon_image)
+
+    # Place team characters dynamically based on their feet positions
+    # Reverse order so slot 1 (index 0) is pasted last and appears on top
+    for i, char_name in reversed(list(enumerate(team))):
+        if char_name in characterImages:
+            char_image_path = characterImages[char_name]
+            if os.path.exists(char_image_path):
+                char_image = Image.open(char_image_path)
+                char_position = calculate_character_position(char_name, i, background_size)
+                image.paste(char_image, char_position, char_image)
+
+    # save the combined image to a new file
+    # save to new file based on discord id, example: battle_screen_123456789.png
+    combined_image_path = f"./graphics/battle/battle_screen_{user_id}.png"
+    image.save(combined_image_path)
+    return combined_image_path
+
 
 def calculate_character_position(char_name, slot_index, background_size):
     """
@@ -1562,6 +1615,8 @@ class BattleView(discord.ui.View):
         self.enemy_kind = enemy_kind      # the /battle choice ("Jack Noir"), items with that drop_from can drop
         self.last_interaction = None  # newest interaction on this battle, used to edit the message if the battle times out
         self.layout = 0               # goes up every time the buttons change so clicks on old buttons get ignored
+        self.scene = None             # (background + starting enemies, team) from /battle, for drawing the picture again
+        self.drawn_summons = []       # the summoned enemies on the picture right now (Garry's Mod's Addonshields)
         self.show_ability_buttons()
 
     def show_ability_buttons(self):
@@ -1660,12 +1715,24 @@ class BattleView(discord.ui.View):
             await self.finish(interaction, result)
             return
         self.show_ability_buttons()
-        await interaction.response.edit_message(embed=build_battle_embed(self.user_id, self.enemy_name), view=self)
+        await interaction.response.edit_message(embed=build_battle_embed(self.user_id, self.enemy_name), view=self, **self.redraw_scene())
 
     async def finish(self, interaction, ending):
         embed = build_battle_embed(self.user_id, self.enemy_name, ending=ending)  # before battle.py throws the battle away
+        scene = self.redraw_scene()
         embed.description += self.end_battle(ending)
-        await interaction.response.edit_message(embed=embed, view=self)
+        await interaction.response.edit_message(embed=embed, view=self, **scene)
+
+    def redraw_scene(self):
+        """When summoned enemies (Garry's Mod's Addonshields) show up or go away the battle picture gets drawn again.
+        Returns the new picture for edit_message, or nothing when the picture didn't change."""
+        if not self.scene or not battleExists(self.user_id):
+            return {}
+        summoned = getBattleSummary(self.user_id)["summoned"]
+        if summoned == self.drawn_summons:
+            return {}
+        self.drawn_summons = summoned
+        return {"attachments": [discord.File(draw_battle_screen(self.user_id, *self.scene, summoned))]}
 
     def end_battle(self, ending):
         """Cleans up the battle in battle.py, sets inBattle back to false and disables every button.
@@ -1736,6 +1803,7 @@ class BattleView(discord.ui.View):
     app_commands.Choice(name="Spearman", value="Spearman"),
     app_commands.Choice(name="Agent", value="Agent"),
     app_commands.Choice(name="Jack Noir", value="Jack Noir"),
+    app_commands.Choice(name="Garry's Mod", value="Garry's Mod"),
 ])
 async def battle(interaction: discord.Interaction,enemies:app_commands.Choice[str]):
     """Battle an Enemy"""
@@ -1766,12 +1834,11 @@ async def battle(interaction: discord.Interaction,enemies:app_commands.Choice[st
         await interaction.response.send_message("\n".join(problems) + "\nPick a new team with the /team command first!")
         return
 
-    # get a random background from the backgrounds hashmap
-    background_name, background_file = random.choice(list(backgrounds.items()))
+    # Garry's Mod has his own background (enemyBackgrounds in utils.py), every other fight is on purple2
+    background_file = backgrounds[enemyBackgrounds.get(enemies.value, DEFAULT_BACKGROUND)]
 
     # comnbine background and sprite images ontop one another using PIL
     background_image = Image.open(background_file)
-    background_size = background_image.size
 
     # Place enemies first (in the background layer)
     enemy_count = 1  # Default to 1 enemy
@@ -1804,20 +1871,10 @@ async def battle(interaction: discord.Interaction,enemies:app_commands.Choice[st
     for a in enemyList:
         print("ENEMY IN LIST:", a)
 
-    # Place team characters dynamically based on their feet positions
-    # Reverse order so slot 1 (index 0) is pasted last and appears on top
-    for i, char_name in reversed(list(enumerate(team))):
-        if char_name in characterImages:
-            char_image_path = characterImages[char_name]
-            if os.path.exists(char_image_path):
-                char_image = Image.open(char_image_path)
-                char_position = calculate_character_position(char_name, i, background_size)
-                background_image.paste(char_image, char_position, char_image)
-
-    # save the combined image to a new file
-    # save to new file based on discord id, example: battle_screen_123456789.png
-    combined_image_path = f"./graphics/battle/battle_screen_{interaction.user.id}.png"
-    background_image.save(combined_image_path)
+    # the background + starting enemies is kept, so enemies summoned later (Garry's Mod's Addonshields) can be drawn in
+    # between them and the team, then the team goes on top and it gets saved (draw_battle_screen)
+    scene_base = background_image.copy()
+    combined_image_path = draw_battle_screen(interaction.user.id, scene_base, team)
 
     # battle.py sets up the turn order, hp and abilities for this user's battle (plus the equipped item's bonuses)
     startBattle(interaction.user.id, team, enemyList, user_data.get("equipped_item"))
@@ -1833,6 +1890,7 @@ async def battle(interaction: discord.Interaction,enemies:app_commands.Choice[st
     if reward_name not in gristRewards:
         print(f"No Grist reward for {reward_name!r} in gristRewards (utils.py), winning this battle gives 0 Grist")
     battle_view = BattleView(interaction.user.id, enemy_title, gristRewards.get(reward_name, 0), enemies.name)
+    battle_view.scene = (scene_base, team)  # for drawing the picture again when enemies get summoned
     battle_embed = build_battle_embed(interaction.user.id, enemy_title)
     opening_result = getBattleResult(interaction.user.id)
     if opening_result:

@@ -43,6 +43,7 @@ def startBattle(discordID, team, enemies, item=None):
     "voidSpot": None,         # SSR Trey's Reality Sink (Option M)
     "skipEnemyTurn": False,   # R Homestuck's Rules for thee: the next enemy turn gets skipped
     "pending": [],            # log lines waiting for the current move's line to be written first (defeats, explosions)
+    "summonsDue": [],         # (side, summoner) for every enemy that is about to get summoned (Garry's Mod's Addonshields)
     "result": None,           # "victory" or "defeat" once the battle is decided
     "item": None,             # the equipped item (item_helper.battleStart fills this in)
   }
@@ -146,8 +147,10 @@ def nextTurn(discordID):
     index += 1
     if not isAlive(discordID, 'players', unit):
       continue
-    if skipsTurn(discordID, 'players', unit):
-      addLog(discordID, f"💤 **{displayName(discordID, 'players', unit)}** is fast asleep and skips their turn.")
+    skipping = skipsTurn(discordID, 'players', unit)
+    if skipping:
+      icon, reason = skipping.get('skipText', ("💤", "is fast asleep"))  # Channeling / Stunned (SR Binktop) say why
+      addLog(discordID, f"{icon} **{displayName(discordID, 'players', unit)}** {reason} and skips their turn.")
       continue
     whosTurn[discordID] = unit
     print("Next turn is for", unit)
@@ -182,8 +185,18 @@ def enemyTurn(discordID):
       addLog(discordID, f"💤 **{displayName(discordID, 'enemies', enemy)}** can't move this turn.")
       continue
 
+    movesLeft = battleStats[discordID]['enemies'][enemy]['moves']
+    # a wound up move (Garry's Mod's Addon-Smash!) goes off first and counts as 1 of the enemy's moves this turn
+    windUp = windingUp(discordID, 'enemies', enemy)
+    if windUp:
+      removeEffect(discordID, windUp)
+      letters, params = splitOptions(allAbilities[discordID]['enemies'][enemy][windUp['windUpMove']])
+      optionChecks(discordID, 'enemies', enemy, windUp['windUpMove'], letters + [dict(params, windUp=None)])
+      checkBattleOver(discordID)
+      movesLeft -= 1
+
     # repeat for number of moves enemy has
-    for move in range(battleStats[discordID]['enemies'][enemy]['moves']):
+    for move in range(movesLeft):
       if info['result'] or not isAlive(discordID, 'enemies', enemy):
         break
       enemyAbilitiesList = allAbilities[discordID]['enemies'][enemy]
@@ -194,6 +207,8 @@ def enemyTurn(discordID):
       print(f"Enemy {enemy} selected ability:", selectedAbility)
       optionChecks(discordID, 'enemies', enemy, selectedAbility, enemyAbilitiesList[selectedAbility])
       checkBattleOver(discordID)
+      if windingUp(discordID, 'enemies', enemy):
+        break  # winding up (Addon-Smash!) takes the rest of the enemy's turn
 
   if not info['result']:
     endRound(discordID)
@@ -283,6 +298,11 @@ def endRound(discordID):
     if wake and isAlive(discordID, effect['side'], effect['unit']):
       applyStatChange(discordID, effect['side'], effect['unit'], wake['name'], wake['stats'], wake['turns'], 'buff')
       addLog(discordID, f"☀️ **{displayName(discordID, effect['side'], effect['unit'])}** woke up: {formatStats(wake['stats'])}{turnsText(wake['turns'])}")
+    # SR Binktop's Annihilating Slash: Channeling ran out without him getting hit, so the slash goes off
+    if effect.get('release') and isAlive(discordID, effect['side'], effect['unit']):
+      releaseChannel(discordID, effect)
+  # enemies summoned by damage at the end of the round (Burn, Bleed, Void Spot) come in now that the timers are done
+  processSummons(discordID)
   clampAllHP(discordID)
 
 def tickVoidSpot(discordID):
@@ -369,6 +389,12 @@ def optionChecks(discordID, side, actor, abilityName, options, chosenTarget=None
     removeEffect(discordID, effect)
 
   writeMoveLog(discordID, move)
+  # SR Binktop's Parry: his counter attacks go after the attack they answer, so the log reads in order
+  for counterSide, countering, counterName, attacker in move.get('counters', []):
+    if isAlive(discordID, counterSide, countering) and isAlive(discordID, side, attacker):
+      optionChecks(discordID, counterSide, countering, counterName, allAbilities[discordID][counterSide][countering][counterName], attacker)
+  # Garry's Mod: enemies summoned by this move's damage come in after it is in the log
+  processSummons(discordID)
   return extraTurn
 
 def resolveMove(discordID, move, letters, params, chosenTarget):
@@ -383,6 +409,14 @@ def resolveMove(discordID, move, letters, params, chosenTarget):
   if 'Z' in letters:
     parts.append(params.get('skipText', "but nothing happened (this move isn't finished yet)"))
     return False
+
+  # windUp (Garry's Mod's Addon-Smash!): this time the move only winds up, enemyTurn makes it really happen next turn
+  if params.get('windUp'):
+    addStatus(discordID, side, actor, params['windUp'], addStacks=0, windUpMove=move['ability'])
+    parts.append(f"{params.get('windUpText', 'winds up')}... (it hits next turn)")
+    return False
+  if params.get('releaseText'):
+    parts.append(params['releaseText'])
 
   # costs / gains for the user
   if params.get('selfDamage'):
@@ -486,6 +520,29 @@ def resolveMove(discordID, move, letters, params, chosenTarget):
     protects = "the team" if guard.get('guardsAllies') else "self"
     parts.append(f"{guard['name']} is up ({chance}% to stop the next attack on {protects})")
 
+  # SR Binktop's Antivirus Shield: a buff and Parry for himself (every attack that lands on him gets countered),
+  # and the teammate picked with Option G is defended (single target attacks on them hit him instead)
+  if params.get('parry'):
+    parry = params['parry']
+    if parry.get('buff'):
+      applyStatChange(discordID, side, actor, move['ability'], parry['buff'], turns, 'buff')
+      parts.append(f"{formatStats(parry['buff'])}{turnsText(turns)}")
+    addStatus(discordID, side, actor, "Parry", turns=turns, addStacks=0, counterOnHit=parry['counter'])
+    parts.append(f"ready to parry with {parry['counter']}")
+    if chosenTarget and chosenTarget != actor and isAlive(discordID, side, chosenTarget):
+      addStatus(discordID, side, chosenTarget, "Defended", turns=turns, addStacks=0, defendedBy=actor)
+      parts.append(f"defending **{displayName(discordID, side, chosenTarget)}**")
+
+  # SR Binktop's Annihilating Slash: Channeling skips his next "skipTurns" turns, getting hit cancels it so he can act again (afterHit),
+  # and if it runs out the slash goes off on the enemy picked with Option F (endRound -> releaseChannel)
+  if params.get('channel'):
+    channel = params['channel']
+    skipTurns = channel.get('skipTurns', 1)
+    # +1 like Sleep (Option K): the round he uses it counts too, then it runs out at the end of his last skipped turn
+    addStatus(discordID, side, actor, "Channeling", turns=skipTurns + 1, addStacks=0, skipTurn=True, breaksOnHit=True,
+              skipText=("⚡", "is channeling"), release=dict(channel, ability=move['ability'], target=chosenTarget))
+    parts.append(f"started Channeling ⚡ (skips their next {skipTurns} turn{'' if skipTurns == 1 else 's'}, getting hit cancels it)")
+
   # Option P: Martyrdom, every hit taken gives the attacker a Doom Mark and they explode if you get knocked out
   if 'P' in letters and params.get('doom') == 'martyrdom':
     perMark = round(battleStats[discordID][side][actor]['attack'] * params.get('explodePower', 150) / 100)
@@ -530,6 +587,9 @@ def hostileMove(discordID, move, letters, params, chosenTarget):
   if not targets:
     parts.append("but there was nobody to hit")
     return
+  # SR Binktop's Antivirus Shield and taunting enemies (Addonshield's Draw Attack) take single target attacks for their teammates
+  if 'B' not in letters:
+    targets = [defenderFor(discordID, foeSide, target, parts) for target in targets]
 
   # R Max's Brick Eating: the first attack after it misses no matter what
   full = next((effect for effect in getEffects(discordID, side, actor) if effect.get('sureMiss')), None) if 'A' in letters else None
@@ -557,10 +617,11 @@ def hostileMove(discordID, move, letters, params, chosenTarget):
   if lingering and (lingering.get('heal') or lingering['name'] == "Void Spot"):
     lingering = None  # those were already handled on your own side
   baseDebuff = {code: -amount for code, amount in params.get('debuff', {}).items()}
-  debuffed, lingered, lostWill = [], [], []
+  debuffed, lingered, lostWill, finished = [], [], [], []
   totalDealt = 0
 
-  for target in targets:
+  # "hits": every target gets attacked that many times, each hit rolls to hit on its own (SR Binktop's Viruslash)
+  for target in [target for target in targets for _ in range(params.get('hits', 1))]:
     if not isAlive(discordID, side, actor):
       break  # the attacker went down mid move (Doom Marks exploding, counter attacks)
     if not isAlive(discordID, foeSide, target):
@@ -606,9 +667,19 @@ def hostileMove(discordID, move, letters, params, chosenTarget):
       itemText = item_helper.hitLanded(discordID, side, actor, move['ability'], foeSide, target)  # on-hit items (Knife Noir)
       if itemText:
         parts.append(itemText)
+      # SR Binktop's Parry: an attack that lands on him gets countered once this move is in the log (optionChecks)
+      parry = next((effect for effect in getEffects(discordID, foeSide, target) if effect.get('counterOnHit')), None)
+      counter = (foeSide, target, parry['counterOnHit'], actor) if parry else None
+      if counter and isAlive(discordID, foeSide, target) and counter not in move.get('counters', []):
+        move.setdefault('counters', []).append(counter)
+        parts.append(f"{targetName} parries! ⚔️")
 
     if not isAlive(discordID, foeSide, target):
       continue
+    # with "hits" the debuffs / lingering / Nihilism below only land once per target
+    if target in finished:
+      continue
+    finished.append(target)
 
     if 'E' in letters:
       stats = dict(baseDebuff)
@@ -671,6 +742,18 @@ def afterHit(discordID, targetSide, target, letters, params, parts):
       removeEffect(discordID, fated)
       mark = addStatus(discordID, targetSide, target, "Doom Mark", addStacks=1, stackLabel=True)
       parts.append(f"Doom Mark on {targetName} (x{mark['stacks']})")
+  # SR Binktop's Code Rot: every hit that lands has a chance to debuff the target (it refreshes instead of stacking)
+  hitDebuff = params.get('hitDebuff')
+  if hitDebuff and random.randint(1, 100) <= hitDebuff.get('chance', 100):
+    stats = {code: -amount for code, amount in hitDebuff['debuff'].items()}
+    hitTurns = hitDebuff.get('turns', 1)
+    if applyStatChange(discordID, targetSide, target, hitDebuff['name'], stats, hitTurns, 'debuff', hitDebuff['name']):
+      parts.append(f"{hitDebuff['name']} on {targetName} ({formatStats(stats)}){turnsText(hitTurns)}")
+  # SR Binktop's Channeling: getting hit cancels it completely
+  for effect in getEffects(discordID, targetSide, target):
+    if effect.get('breaksOnHit'):
+      removeEffect(discordID, effect)
+      parts.append(f"{targetName}'s {effect['name']} was broken")
 
 def accEvaCheck(discordID, side, attacker, target, params=None):
   # returns 1 of 3 things, 0 = Hit, 1 = Miss, 2 = Evade
@@ -764,6 +847,39 @@ def tryNervousInterrupt(discordID, move):
         optionChecks(discordID, foeSide, guardian, counter, guardianAbilities[counter], actor)
       return True
   return False
+
+def defenderFor(discordID, side, unit, parts):
+  # Who a single target attack aimed at this unit really hits:
+  # SR Binktop's Antivirus Shield sends attacks on the teammate he defends to him, and a taunting unit (Option L,
+  # like Addonshield's Draw Attack) pulls attacks aimed at the rest of its side (enemy AI already goes for taunters itself)
+  for status in getEffects(discordID, side, unit):
+    defender = status.get('defendedBy')
+    if defender and defender != unit and isAlive(discordID, side, defender):
+      parts.append(f"**{displayName(discordID, side, defender)}** took the attack for **{displayName(discordID, side, unit)}**")
+      return defender
+  if not isTaunting(discordID, side, unit):
+    taunter = next((other for other in aliveUnits(discordID, side) if other != unit and isTaunting(discordID, side, other)), None)
+    if taunter:
+      parts.append(f"**{displayName(discordID, side, taunter)}** drew the attack away from **{displayName(discordID, side, unit)}**")
+      return taunter
+  return unit
+
+def releaseChannel(discordID, channel):
+  # SR Binktop's Annihilating Slash: flat damage + a % of the enemy's max hp (no accuracy roll after all that channeling),
+  # on the enemy picked when it was used (or a random one if that enemy is gone), then he is Stunned
+  side, unit, release = channel['side'], channel['unit'], channel['release']
+  foeSide = otherSide(side)
+  foes = aliveUnits(discordID, foeSide)
+  name = f"**{displayName(discordID, side, unit)}**"
+  if foes:
+    target = release['target'] if release.get('target') in foes else random.choice(foes)
+    damage = (computeDamage(discordID, side, unit, foeSide, target, {"damage": release.get('damage', 0)})[0]
+              + computeDamage(discordID, side, unit, foeSide, target, {"percentMaxHP": release.get('percentMaxHP', 0)})[0])
+    dealt = dealDamage(discordID, foeSide, target, damage)
+    addLog(discordID, f"⚡ {name} unleashes **{release['ability']}** on **{displayName(discordID, foeSide, target)}** for {dealt}!")
+  stunTurns = release.get('stunTurns', 1)
+  addStatus(discordID, side, unit, "Stunned", turns=stunTurns, addStacks=0, skipTurn=True, skipText=("💫", "is stunned"))
+  addLog(discordID, f"💫 {name} is Stunned{turnsText(stunTurns)}")
 
 def tryInterfere(discordID, side, unit, parts):
   # R Noah's Interfere (Option N): chance to cancel a hit aimed at the unit, used up once it works
@@ -897,8 +1013,13 @@ def totalStacks(discordID, side, name):
 def isTaunting(discordID, side, unit):
   return any(effect.get('taunt') for effect in getEffects(discordID, side, unit))
 
+def windingUp(discordID, side, unit):
+  # the status of a move the unit is winding up (Garry's Mod's "Rearing Up"), or None
+  return next((effect for effect in getEffects(discordID, side, unit) if effect.get('windUpMove')), None)
+
 def skipsTurn(discordID, side, unit):
-  return any(effect.get('skipTurn') for effect in getEffects(discordID, side, unit))
+  # the status that makes the unit skip its turn (Asleep, Channeling, Stunned), or None
+  return next((effect for effect in getEffects(discordID, side, unit) if effect.get('skipTurn')), None)
 
 def isDebuffImmune(discordID, side, unit):
   return any(effect.get('debuffImmune') for effect in getEffects(discordID, side, unit))
@@ -952,6 +1073,14 @@ def dealDamage(discordID, side, unit, amount):
     return 0
   amount = max(0, int(round(amount)))
   stats['ehp'] = max(0, stats['ehp'] - amount)
+  # Garry's Mod (enemySummons): every "everyDamage" damage taken summons 1 more enemy (processSummons brings it in)
+  summon = stats.get('summon')
+  if summon:
+    stats['damageTaken'] += amount
+    due = stats['damageTaken'] // summon['everyDamage'] - stats['summonCount']
+    if due > 0 and stats['ehp'] > 0:
+      stats['summonCount'] += due
+      battleInfo[discordID]['summonsDue'] += [(side, unit)] * due
   if stats['ehp'] == 0:
     handleDefeat(discordID, side, unit)
   return amount
@@ -980,6 +1109,31 @@ def handleDefeat(discordID, side, unit):
   # SSR Scottie's Martyrdom (Option P): getting knocked out while it is up makes every Doom Mark explode
   if martyr:
     explodeDoomMarks(discordID, side, unit, martyr['explodePerMark'])
+  # enemies it summoned (Garry's Mod's Addonshields) vanish along with it
+  for other, stats in battleStats[discordID][side].items():
+    if stats.get('summoner') == unit and stats['ehp'] > 0:
+      stats['ehp'] = 0
+      battleEffects[discordID] = [effect for effect in battleEffects[discordID] if not (effect['side'] == side and effect['unit'] == other)]
+      queueLog(discordID, f"💨 **{displayName(discordID, side, other)}** vanishes!")
+
+def processSummons(discordID):
+  # Garry's Mod (enemySummons in utils.py): brings in the enemies dealDamage said are due, after the move that caused them.
+  # A summon uses its first move straight away (Addonshield's Draw Attack protects Garry's Mod right away), then acts every enemy turn
+  info = battleInfo[discordID]
+  while info['summonsDue'] and not info['result']:
+    side, summoner = info['summonsDue'].pop(0)
+    if not isAlive(discordID, side, summoner):
+      continue
+    kind = battleStats[discordID][side][summoner]['summon']['summon']
+    number = sum(1 for stats in battleStats[discordID][side].values() if stats.get('kind') == kind) + 1
+    unit = f"{kind}{number}"
+    battleStats[discordID][side][unit] = dict(enemyStats(kind), kind=kind, summoner=summoner, slot=number - 1)
+    allAbilities[discordID][side][unit] = enemyAbilities[kind]
+    info['names'][side][unit] = kind if number == 1 else f"{kind} {number}"
+    addLog(discordID, f"✨ **{displayName(discordID, side, summoner)}** summons **{displayName(discordID, side, unit)}**!")
+    firstMove = next(iter(allAbilities[discordID][side][unit]), None)
+    if firstMove:
+      optionChecks(discordID, side, unit, firstMove, allAbilities[discordID][side][unit][firstMove])
 
 def explodeDoomMarks(discordID, side, unit, perMark):
   foeSide = otherSide(side)
@@ -1090,6 +1244,9 @@ def getBattleSummary(discordID):
     "enemies": unitRows('enemies'),
     "field": f"🌀 Void Spot: {spot['power']}% power, bursts in {spot['turns']}t" if spot else None,
     "log": list(battleLog[discordID]),
+    # summoned enemies that are still standing, for drawing them on the battle screen: [(kind, slot)]
+    "summoned": [(stats['kind'], stats['slot']) for stats in battleStats[discordID]['enemies'].values()
+                 if stats.get('summoner') and stats['ehp'] > 0],
   }
 
 def describeEffects(discordID, side, unit):
@@ -1207,17 +1364,25 @@ def getStats(discordID, team, enemies):
     }
 
   for enemy in enemies:
-    ehp = enemyAttributes[enemy][0] + int(enemyAttributes[enemy][2] * 1.2)
-    allStats['enemies'][enemy] = {
-      "ehp": ehp,
-      "maxEhp": ehp,
-      "attack": enemyAttributes[enemy][1],
-      "evasion": enemyAttributes[enemy][4],
-      "accuracy": enemyAttributes[enemy][5],
-      "moves": enemyAttributes[enemy][3]
-    }
+    allStats['enemies'][enemy] = enemyStats(enemy)
 
   return allStats
+
+def enemyStats(enemy):
+  # an enemy's battle stats from enemyAttributes (also used for enemies summoned during the battle)
+  ehp = enemyAttributes[enemy][0] + int(enemyAttributes[enemy][2] * 1.2)
+  stats = {
+    "ehp": ehp,
+    "maxEhp": ehp,
+    "attack": enemyAttributes[enemy][1],
+    "evasion": enemyAttributes[enemy][4],
+    "accuracy": enemyAttributes[enemy][5],
+    "moves": enemyAttributes[enemy][3]
+  }
+  if enemy in enemySummons:
+    # Garry's Mod: counts the damage he takes so dealDamage knows when to summon
+    stats.update(summon=enemySummons[enemy], damageTaken=0, summonCount=0)
+  return stats
 
 def getDisplayNames(team, enemies):
   # short names for the embed: "r_abraize" -> "R Abraize", "Ruffian1" -> "Ruffian 1" (or just "Ruffian" when it is alone)

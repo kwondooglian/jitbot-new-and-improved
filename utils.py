@@ -11,11 +11,12 @@ jaydenChar = ["ssr_jayden", "r_jaiden"]
 homestuckChar = ["r_homestuck", "sr_homestuck"]
 scottieChar = ["ssr_scottie"]
 maxChar = ["r_max", "sssr_max"]
+binktopChar = ["sr_binktop"]
 '''
 
 # Characters that exists here are every character in the game but in each section
 rChar = ["r_abraize", "r_abraize2", "r_trey", "r_noah", "r_freeman", "r_stephen", "r_homestuck", "r_max", "r_jaiden"]
-srChar = ["sr_freeman", "sr_stephen", "sr_homestuck", "sr_abraize", "sr_trey", "sr_noah"]
+srChar = ["sr_freeman", "sr_stephen", "sr_homestuck", "sr_abraize", "sr_trey", "sr_noah", "sr_binktop"]
 ssrChar = ["ssr_abraize", "ssr_trey", "ssr_jayden"]
 specialChar = ["ssr_scottie"]
 secretChar = ["sssr_max"]
@@ -41,12 +42,19 @@ characterTitles = {
     "r_max": "[I can make a-] Max Yakuvobich",
     "r_jaiden": "[Picked up, Packed up] Jaiden Ceballos",
     "ssr_scottie": "[Overwhelming Dread] Scottie Jenkins",
+    "sr_binktop": "[Saviour of the Digital Realm] Binktop",
     "sssr_max": "[???] ???"
 }
 
 backgrounds = {
     "purple1": "./graphics/battle/purple1.png",
-    "purple2": "./graphics/battle/purple2.png"
+    "purple2": "./graphics/battle/purple2.png",
+    "garrysmod": "./graphics/battle/garrysmodbackground.png"
+}
+# /battle uses purple2, unless the enemy has its own background here
+DEFAULT_BACKGROUND = "purple2"
+enemyBackgrounds = {
+    "Garry's Mod": "garrysmod",
 }
 
 characterImages ={
@@ -68,7 +76,8 @@ characterImages ={
     "ssr_scottie": "./graphics/battle/ssr_scottie.png",
     "r_homestuck": "./graphics/battle/r_homestuck.png",
     "r_max": "./graphics/battle/r_max.png",
-    "r_jaiden": "./graphics/battle/r_jaiden.png"
+    "r_jaiden": "./graphics/battle/r_jaiden.png",
+    "sr_binktop": "./graphics/battle/sr_binktop.png"
 }
 enemyImages = {
     "RuffianBack": "./graphics/battle/ruffianBack.png",   # file names match the capital letters of the real files
@@ -76,7 +85,9 @@ enemyImages = {
     "Grunt": "./graphics/battle/grunt.png",
     "Spearman": "./graphics/battle/spearman.png",
     "Agent": "./graphics/battle/agent.png",
-    "Jack Noir": "./graphics/battle/jackNoir.png"
+    "Jack Noir": "./graphics/battle/jackNoir.png",
+    "Garry's Mod": "./graphics/battle/gmod.png",
+    "Addonshield": "./graphics/battle/addonshield.png"
 }
 
 # Character Banner GIFs
@@ -110,6 +121,7 @@ SSSR_MAX_GIF = "https://media.discordapp.net/attachments/1442548563879133357/146
 R_HOMESTUCK_GIF = "https://media.discordapp.net/attachments/907662210619289600/1572833434982817802/R_HOMESTUCK.gif?ex=6affcec8&is=6afe7d48&hm=ca625cfb04880771fd058c6b5d9ff076c2781b5c117970f0a9152d4ade002888"
 R_MAX_GIF = "https://media.discordapp.net/attachments/907662210619289600/1572833434357727273/R_MAX2.gif?ex=6affcec8&is=6afe7d48&hm=e52418210d467478e525be4e53f2c69e93381a93178ec72f27427d9ffb7f2005"
 R_JAIDEN_GIF = "https://media.discordapp.net/attachments/907662210619289600/1572833434643202190/R_JAIDEN.gif?ex=6affcec8&is=6afe7d48&hm=2734c1b5863d9073f6402b039175ba1e8a9f77356c484ef07962dffd7b6f7933"
+SR_BINKTOP_GIF = ""  # put the gif's web link here once there is one (/char shows no picture until then)
 
 
 
@@ -120,7 +132,21 @@ enemySpots = {
     "RuffianSolo": (0, 150),
     "Spearman": (15, 145),
     "Agent": (20, 150),
-    "Jack Noir": (0, 150)
+    "Jack Noir": (0, 150),
+    "Garry's Mod": (0, 37)
+}
+
+# Enemies that get summoned during a battle (Garry's Mod's Addonshields) are drawn onto the battle screen when they show up:
+# the 1st one goes in the 1st spot, the 2nd in the 2nd... (more than there are spots start again from the 1st)
+# "scale" shrinks the picture (0.6 = 60% of its size)
+summonSpots = {
+    "Addonshield": {"scale": 0.6, "spots": [(150, 232), (30, 236), (190, 160), (75, 150)]},
+}
+
+# Enemies that summon more enemies during the battle: every "everyDamage" damage they take, 1 "summon" shows up
+# (the summon needs its own enemyAttributes and enemyAbilities line, and it vanishes if the enemy that summoned it is defeated)
+enemySummons = {
+    "Garry's Mod": {"summon": "Addonshield", "everyDamage": 161},
 }
 
 # Enemy Attributes and Character Attributes (5 basic stats, how many moves they get, plus abilities name)
@@ -131,7 +157,9 @@ enemyAttributes = {
     "Grunt": [400, 25, 45, 2, 0, 65, "Punch", "Slam, Deal 15 Damage to all party members"],
     "Spearman": [175, 5, 5, 2, 0, 80, "Punch", "Swipe, Deal 20 damage to all party members", "Stab, Apply 15%% attack damage bonus to self for this turn and deal damage"],
     "Agent": [175, 15, 5, 2, 0, 80, "Punch", "Sneak, Add 15%% evasion to self for next 4 turns, then use Punch"],
-    "Jack Noir": [1000, 30, 10, 3, 5, 90, "Stab", "Shiv, Deal damage and apply bleed to player (-3% hp per turn) for one turn, this can stack", "Slash, Deal only 5 damage to all party members, but apply bleed to all party members for one turn.", "Extra Passive: Attack lowest health party member each turn"]
+    "Jack Noir": [1000, 30, 10, 3, 5, 90, "Stab", "Shiv, Deal damage and apply bleed to player (-3% hp per turn) for one turn, this can stack", "Slash, Deal only 5 damage to all party members, but apply bleed to all party members for one turn.", "Extra Passive: Attack lowest health party member each turn"],
+    "Garry's Mod": [650, 45, 45, 2, 0, 85, "Hit, Deal 50% of atk to a targeted enemy", "Addon-Smash!, Rear up for 1 turn then come crashing down on a targeted enemy for full atk", "Passive: Every 161 damage taken, summon an Addonshield in front of himself"],
+    "Addonshield": [100, 0, 15, 1, 0, 0, "Draw Attack, The player team's attacks on Garry's Mod hit the Addonshield instead"]
 }
 
 # Grist the player gets for WINNING a /battle (losing, retreating or timing out gives nothing)
@@ -144,6 +172,7 @@ gristRewards = {
     "Agent": 9,
     "Grunt": 15,
     "Jack Noir": 35,
+    "Garry's Mod": 50,
 }
 
 # How much Grist 1 roll costs in /item store (a whole number above 0)
@@ -173,6 +202,7 @@ characterAttributes = {
     "r_homestuck": [140, 11, 7, 5, 90, "Punch", "Spotlight Shift", "Rules for thee"],
     "r_max": [165, 10, 13, 2, 90, "Punch", "Brick Eating", "Tour Alliance"],
     "r_jaiden": [120, 9, 10, 3, 90, "Punch", "Pick Up", "Commitment and Fuck"],
+    "sr_binktop": [270, 20, 25, 0, 90, "Viruslash", "McAfee 265+ Antivirus Shield", "Premium Subscription Malware Annihilating Slash"],
     "sssr_max": ["?", "??", "???", "???", "???", "???", "???", "???", "???", "?????"]
 }
 
@@ -201,7 +231,9 @@ characterAttributes = {
 #            Hits 1 enemy (all of them with Option B) and rolls accuracy vs evasion
 #            numbers: "power" = % of attack used (default 100), "damage" = flat damage instead of the attack stat,
 #                     "percentMaxHP" / "percentCurrentHP" = damage is a % of the target's hp, "trueDamage" = ignores defense buffs,
-#                     "sureHit" = can't miss or be evaded, "recoil" = % of the damage dealt that the user takes too
+#                     "sureHit" = can't miss or be evaded, "recoil" = % of the damage dealt that the user takes too,
+#                     "hits" = how many times each target gets hit (each hit rolls to hit on its own, SR Binktop's Viruslash),
+#                     "hitDebuff": {"name", "chance", "debuff", "turns"} = every hit that lands has a chance to debuff the target (Code Rot)
 # Option B = Area of Effect at Enemies
 # Option C = Area of Effect at Teammates
 # Option D = Buff: the whole team with Option C, one picked teammate with Option G, otherwise yourself
@@ -223,7 +255,8 @@ characterAttributes = {
 #                     "buffPerStack": {"name", "stats"} = the buff is multiplied by how many stacks you have
 # Option J = Rewind (SSR Abraize): the team's hp, buffs and debuffs go back to how they were at the start of the previous turn
 # Option K = Sleep (R Abraize): skip your next turn then wake up with a buff, numbers: "sleepTurns", "wakeBuff": {stat: %}, "wakeTurns"
-# Option L = Taunt: enemies' single target attacks have to go at you, numbers: "taunt" = how many turns
+# Option L = Taunt: the other side's single target attacks have to go at you, numbers: "taunt" = how many turns
+#            (an enemy taunting, like Addonshield's Draw Attack, makes the party's attacks on its teammates hit it instead)
 # Option M = Lingering effect that does something every turn, numbers: "lingering": {...}
 #            "Burn" / "Bleed" = lose "percent" of max hp every turn (lands on the other side like Option E, "stackable" lets it stack)
 #            "Regeneration" with "heal": True = heal "percent" of max hp every turn (lands on your side like Option D)
@@ -259,6 +292,13 @@ characterAttributes = {
 #   "ranged" = it is a ranged attack (these miss while a Void Spot is on the field)
 #   "buffName" / "debuffName" = name shown in the embed for the buff/debuff (like "Warped")
 #   "failText" = what the battle log says when an Option O "chance" move doesn't work
+#   "parry": {"buff", "counter"} = buff + Parry on yourself for "turns", every attack that lands on you gets the "counter" move back,
+#            with Option G the picked teammate is defended (single target attacks on them hit you instead) (SR Binktop's Antivirus Shield)
+#   "windUp": "status name" = enemies only: using the move just winds up (shown as that status) and ends the enemy's turn,
+#            the move really happens at the start of its next turn, "windUpText" / "releaseText" = the battle log (Garry's Mod's Addon-Smash!)
+#   "channel": {"skipTurns", "damage", "percentMaxHP", "stunTurns"} = Channeling: your next "skipTurns" turns are skipped and getting hit
+#            cancels it (you can act again), if it runs out you hit the Option F enemy for damage + % of its max hp, then you're Stunned
+#            (SR Binktop's Annihilating Slash)
 
 # Options D and E are Basic buffs meaning they only change the 5 main stats of HP, Attack, Defense, Evasion, and Accuracy
 # These are the stat codes used inside "buff" / "debuff":
@@ -418,6 +458,17 @@ characterAbilities = {
     ]}],
     # pick a teammate: every attack they make on their next turn is guaranteed to hit
     "Commitment and Fuck": ['D', 'G', {"sureHitsNextTurn": "Committed"}]
+  },
+  "sr_binktop": {
+    # 2 swipes at 1 enemy, 75% atk each, every swipe that lands has a 15% chance of Code Rot (-10% atk for 2 turns)
+    "Viruslash": ['A', 'F', {"power": 75, "hits": 2, "hitDebuff": {"name": "Code Rot", "chance": 15, "debuff": {"BB": 10}, "turns": 2}}],
+    # +75% def and Parry for this turn (every attack that lands on him gets a Viruslash back), 3 turn cooldown
+    # pick a teammate to defend (their single target attacks hit him instead), picking himself defends nobody
+    "McAfee 265+ Antivirus Shield": ['G', 'H', {"parry": {"buff": {"CC": 75}, "counter": "Viruslash"}, "turns": 0, "cooldown": 3}],
+    # pick an enemy, Channeling skips his next 2 turns (getting hit cancels it and he can act again), then 265 + 7.5% of the
+    # enemy's max hp as damage and he is Stunned for 1 turn, 6 turn cooldown
+    "Premium Subscription Malware Annihilating Slash": ['F', 'H', {"channel": {"skipTurns": 2, "damage": 265, "percentMaxHP": 7.5, "stunTurns": 1},
+                                                                   "cooldown": 6}]
   }
 }
 
@@ -447,5 +498,14 @@ enemyAbilities = {
     "Shiv": ['A', 'F', 'I', 'M', 'Q', {"lingering": {"name": "Bleed", "percent": 3, "turns": 1, "stackable": True}}],
     # Only 5 damage, but to all party members and they all Bleed
     "Slash": ['A', 'B', 'M', {"damage": 5, "lingering": {"name": "Bleed", "percent": 3, "turns": 1, "stackable": True}}]
+  },
+  "Garry's Mod": {
+    "Hit": ['A', 'F', {"power": 50}],                               # 50% of atk to 1 party member
+    # rears up (that ends his turn), then at the start of his next turn comes crashing down for 100% of atk on 1 party member
+    "Addon-Smash!": ['A', 'F', {"windUp": "Rearing Up", "windUpText": "rears up", "releaseText": "comes crashing down"}]
+  },
+  "Addonshield": {
+    # Taunt for enemies: the party's single target attacks on Garry's Mod hit the Addonshield instead
+    "Draw Attack": ['L', {"taunt": 1}]
   }
 }

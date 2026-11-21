@@ -103,6 +103,7 @@ Players earn Grist by **winning** a /battle. Losing, retreating or letting the b
 | Agent | 9 |
 | Grunt | 15 |
 | Jack Noir | 35 |
+| Garry's Mod | 50 |
 
 Players can spend Grist on items, or on rolls with the **Buy a Roll** button in /item store. A roll costs 15 Grist and they can buy as many as they like. To change the price, edit **rollPrice** in utils.py and restart the bot.
 The **Buy 10 Rolls** button gives 10 rolls for 135 Grist, also as many times as they like. To change it, edit **rollBundleAmount** and **rollBundlePrice** in utils.py and restart the bot.

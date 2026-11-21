@@ -57,7 +57,7 @@ def main():
             "r_stephen.png", "sr_stephen.png",
             "sr_homestuck.png", "r_homestuck.png",
             "r_max.png", "r_jaiden.png",
-            "ssr_scottie.png"
+            "ssr_scottie.png", "sr_binktop.png"
         ]
         
         print("Character Feet Positions")

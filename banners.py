@@ -96,6 +96,7 @@ add_banner(
         "sr_homestuck",
         "sr_abraize",
         "sr_trey",
+        "sr_binktop",
         # R
         "r_abraize",
         "r_abraize2",
@@ -129,6 +130,7 @@ add_banner(
         "sr_homestuck",
         "sr_abraize",
         "sr_trey",
+        "sr_binktop",
         # R
         "r_abraize",
         "r_abraize2",
