@@ -3,6 +3,7 @@
 # To add or change an item you only need MongoDB Compass (the README's "Items" part explains how), nothing in here
 # A brand-new KIND of effect needs code in here (EFFECTS, effectText and the battle part) and maybe a hook in battle.py
 
+import math
 import os
 import random
 
@@ -30,7 +31,9 @@ OPTIONAL_FIELDS = ["price",                         # needed for every item that
                    "emoji", "image",
                    "in_store",                      # false = it can't be bought (like Knife Noir)
                    "drop_from", "drop_chance",      # a /battle enemy that can drop it when you win, and the % chance
-                   "skip_chance", "skip_text"]      # a downside any item can have (Protein Brick)
+                   "skip_chance", "skip_text",      # a downside any item can have (Protein Brick)
+                   "skip_turns",                    # a downside: the team skips its first few turns (Huawei Laptop)
+                   "hide_hp"]                       # a downside: nobody's HP can be seen during battles (Noah's Larpometer)
 
 # The /battle enemies an item can drop from ("Ruffian1" and "Ruffian2" are both "Ruffian")
 ENEMY_NAMES = sorted({enemy.rstrip("0123456789") for enemy in enemyAttributes})
@@ -58,8 +61,12 @@ EFFECTS = {
     "crit_chance": {"stats": False, "numbers": ["chance", "multiplier"]},
     "periodic_heal": {"stats": False, "numbers": ["every", "percent"]},
     "basic_attack_bleed": {"stats": False, "numbers": ["percent", "turns"]},
+    "grist_bonus": {"stats": False, "numbers": ["percent"]},                # more Grist for winning (Noah's Larpometer)
+    "skip_enemy_turns": {"stats": False, "numbers": ["turns"]},             # the enemies skip their first turns (Samsung Camera)
+    "delayed_stat_percent": {"stats": True, "numbers": ["turns"]},          # like stat_percent, but only after the first turns (Huawei Laptop)
 }
 STAT_EFFECTS = [effect for effect, rules in EFFECTS.items() if rules["stats"]]
+PERCENT_EFFECTS = ["stat_percent", "delayed_stat_percent"]  # their hp and attack numbers are a %, not a flat amount
 
 ALL_FIELDS = REQUIRED_FIELDS + OPTIONAL_FIELDS + list(STAT_FIELDS) + list(NUMBER_RULES)
 
@@ -115,6 +122,19 @@ STARTING_ITEMS = [
      "description": "Jack Noir's own knife, taken from him after a hard fight. Afflict bleed via stabbing during every basic attack.",
      "emoji": "🗡️", "image": "graphics/items/knifenoir.png",
      "effect": "basic_attack_bleed", "percent": 3, "turns": 1},
+    {"name": "Noah's Larpometer", "price": 65,
+     "description": "Noah's very own Larp Meter. It's so busy measuring everyone's performativeness that nobody can read their HP anymore.",
+     "emoji": "📟", "image": "graphics/items/noahslarpometer.png",
+     "effect": "grist_bonus", "percent": 10, "hide_hp": True},
+    {"name": "Samsung Camera", "price": 40,
+     "description": "A point-and-shoot camera. The flash catches the enemies off guard before the fight even starts.",
+     "emoji": "📷", "image": "graphics/items/camera.png",
+     "effect": "skip_enemy_turns", "turns": 1},
+    {"name": "Huawei Laptop", "price": 90,
+     "description": "A Huawei laptop with Garry's Mod open. It takes forever to boot, but once it's running your team is unstoppable.",
+     "emoji": "💻", "image": "graphics/items/huaweilaptop.png",
+     "effect": "delayed_stat_percent", "attack": 25, "defense": 25, "accuracy": 25, "turns": 3,
+     "skip_turns": 3, "skip_text": "The Huawei Laptop is still booting up, so your team waits and skips its turn."},
 ]
 
 
@@ -272,9 +292,19 @@ def checkItem(typed):
     if not isNumber(skipChance) or not 0 <= skipChance < 100:
         return skip('skip_chance has to be a number of 0 or more and below 100, like "skip_chance": 50.' + typeHint(skipChance))
     item["skip_chance"] = skipChance
+    # the downside: the whole team skips its first few turns of every battle (Huawei Laptop)
+    skipTurns = typed.get("skip_turns", 0)
+    if not isWholeNumber(skipTurns) or skipTurns < 0:
+        return skip('skip_turns has to be a whole number of 0 or more, like "skip_turns": 3.' + typeHint(skipTurns))
+    item["skip_turns"] = int(skipTurns)
+    # the downside: nobody's HP can be seen during battles (Noah's Larpometer)
+    hideHP = typed.get("hide_hp", False)
+    if not isinstance(hideHP, bool):
+        return skip('hide_hp has to be true or false (the Boolean type in Compass), like "hide_hp": true')
+    item["hide_hp"] = hideHP
     skipText = typed.get("skip_text")
-    if skipText is not None and not skipChance:
-        warn(f"{where}: skip_text only does something when the item has a skip_chance, so it was ignored.")
+    if skipText is not None and not skipChance and not skipTurns:
+        warn(f"{where}: skip_text only does something when the item has a skip_chance or skip_turns, so it was ignored.")
     elif skipText is not None and (not isinstance(skipText, str) or not skipText.strip()):
         warn(f'{where}: skip_text has to be text, like "skip_text": "Your team trips over.", so the normal text is used.')
         skipText = None
@@ -321,35 +351,56 @@ def checkImage(image, where):
 def effectText(item):
     """Shown in /item store, /item show, /item equip and the battle log."""
     text = mainEffectText(item)
+    downsides = []
+    if item.get("skip_turns"):
+        turns = item["skip_turns"]
+        downsides.append("your whole team skips its first turn of each battle" if turns == 1
+                         else f"your whole team skips its first {turns} turns of each battle")
     if item.get("skip_chance"):
-        text += f", but every turn there's a {item['skip_chance']:g}% chance your whole team skips its turn"
+        downsides.append(f"every turn there's a {item['skip_chance']:g}% chance your whole team skips its turn")
+    if item.get("hide_hp"):
+        downsides.append("nobody's HP can be seen during battles")
+    if downsides:
+        text += ", but " + joinWords(downsides)
     return text
+
+
+def statWords(item):
+    """The stat bonuses of a stat effect item, like "+25% ATK, 25% less damage taken and +25% ACC"."""
+    percent = item["effect"] in PERCENT_EFFECTS
+    parts = []
+    for stat in STAT_ORDER:
+        amount = item["stats"].get(stat)
+        if not amount:
+            continue
+        if stat == "hp":
+            parts.append(f"+{amount:g}% max HP" if percent else f"+{amount:g} HP")
+        elif stat == "attack":
+            parts.append(f"+{amount:g}% ATK" if percent else f"+{amount:g} ATK")
+        elif stat == "defense":
+            parts.append(f"{amount:g}% less damage taken")
+        elif stat == "evasion":
+            parts.append(f"+{amount:g}% EVA")
+        else:
+            parts.append(f"+{amount:g}% ACC")
+    return joinWords(parts)
 
 
 def mainEffectText(item):
     effect = item["effect"]
     if effect in STAT_EFFECTS:
-        percent = effect == "stat_percent"
-        parts = []
-        for stat in STAT_ORDER:
-            amount = item["stats"].get(stat)
-            if not amount:
-                continue
-            if stat == "hp":
-                parts.append(f"+{amount:g}% max HP" if percent else f"+{amount:g} HP")
-            elif stat == "attack":
-                parts.append(f"+{amount:g}% ATK" if percent else f"+{amount:g} ATK")
-            elif stat == "defense":
-                parts.append(f"{amount:g}% less damage taken")
-            elif stat == "evasion":
-                parts.append(f"+{amount:g}% EVA")
-            else:
-                parts.append(f"+{amount:g}% ACC")
-        text = joinWords(parts) + " for every team member"
+        text = statWords(item) + " for every team member"
         if effect == "temp_stat_flat":
             turns = item["turns"]
             text += " during the first turn of each battle" if turns == 1 else f" during the first {turns} turns of each battle"
+        if effect == "delayed_stat_percent":
+            text += f" from turn {item['turns'] + 1} of each battle on"
         return text
+    if effect == "grist_bonus":
+        return f"+{item['percent']:g}% Grist for every battle your team wins (rounded up)"
+    if effect == "skip_enemy_turns":
+        turns = item["turns"]
+        return "The enemy team skips its first turn of each battle" if turns == 1 else f"The enemy team skips its first {turns} turns of each battle"
     if effect == "crit_chance":
         return f"Every hit your team lands has a {item['chance']:g}% chance to be a critical hit for {item['multiplier']:g}x damage"
     if effect == "periodic_heal":
@@ -422,7 +473,7 @@ def icon(item):
 def addStats(stats, item):
     """Adds the item's stat numbers to 1 team member's battle stats. Returns exactly what was added, so it can be taken off again.
     defense goes into "itemDefense", which damageTakenMultiplier() in battle.py counts like a defense buff (5 = 5% less damage)."""
-    percent = item["effect"] == "stat_percent"
+    percent = item["effect"] in PERCENT_EFFECTS
     added = {}
     for stat, amount in item["stats"].items():
         if stat == "hp":
@@ -449,7 +500,7 @@ def battleStart(discordID, itemName):
         return
     state = {"data": item, "temporary": {}}  # temporary = what temp_stat_flat added to each team member
     b.battleInfo[discordID]['item'] = state
-    if item["effect"] in STAT_EFFECTS:
+    if item["effect"] in STAT_EFFECTS and item["effect"] != "delayed_stat_percent":  # delayed ones start in roundStart
         for unit, stats in b.battleStats[discordID]['players'].items():
             added = addStats(stats, item)
             if item["effect"] == "temp_stat_flat":
@@ -477,6 +528,12 @@ def roundStart(discordID):
         state["temporary"] = {}
         b.addLog(discordID, f"⌛ The **{item['name']}** bonus wore off.")
 
+    # delayed_stat_percent (Huawei Laptop): the bonus starts on turn "turns" + 1 and lasts the rest of the battle
+    if item["effect"] == "delayed_stat_percent" and roundNumber == item["turns"] + 1:
+        for unit in b.aliveUnits(discordID, 'players'):
+            addStats(b.battleStats[discordID]['players'][unit], item)
+        b.addLog(discordID, f"{icon(item)} **{item['name']}** kicks in: {statWords(item)} for every team member for the rest of the battle!")
+
     # periodic_heal: every few rounds each team member that is still standing heals a % of their max hp
     if item["effect"] == "periodic_heal" and roundNumber % item["every"] == 0:
         healed = []
@@ -493,14 +550,48 @@ def teamSkipsTurn(discordID):
     """startBattle() and nextTurn() call this when the team's part of a round is about to start.
     Items with a skip_chance (Protein Brick) can make the whole team skip it. Returns True when they skip, after logging it."""
     b = _battle()
-    state = b.battleInfo[discordID].get('item')
-    if not state or not state["data"]["skip_chance"] or b.battleInfo[discordID]['result']:
+    info = b.battleInfo[discordID]
+    state = info.get('item')
+    if not state or info['result']:
         return False
     item = state["data"]
-    if random.uniform(0, 100) >= item["skip_chance"]:
+    # skip_turns (Huawei Laptop): the first few turns of every battle are always skipped
+    if info['round'] <= item["skip_turns"]:
+        b.addLog(discordID, f"{icon(item)} {item['skip_text']} ({info['round']}/{item['skip_turns']})")
+        return True
+    if not item["skip_chance"] or random.uniform(0, 100) >= item["skip_chance"]:
         return False
     b.addLog(discordID, f"{icon(item)} {item['skip_text']}")
     return True
+
+
+def enemiesSkipTurn(discordID):
+    """enemyTurn() calls this before the enemies move. skip_enemy_turns items (Samsung Camera) make them skip their
+    first few turns of the battle. Returns True when they skip, after logging it."""
+    b = _battle()
+    info = b.battleInfo[discordID]
+    state = info.get('item')
+    if not state or state["data"]["effect"] != "skip_enemy_turns" or info['round'] > state["data"]["turns"]:
+        return False
+    item = state["data"]
+    b.addLog(discordID, f"{icon(item)} **{item['name']}**: the enemies' turn was skipped!")
+    return True
+
+
+def hidesHP(discordID):
+    """getBattleSummary() asks this: hide_hp items (Noah's Larpometer) hide everyone's HP in the battle embed."""
+    state = _battle().battleInfo[discordID].get('item')
+    return bool(state and state["data"]["hide_hp"])
+
+
+def gristBonus(discordID, reward):
+    """The BattleView asks this when a battle is won, before the battle is cleaned up.
+    grist_bonus items (Noah's Larpometer) give that % more Grist, rounded up. Returns (extra Grist, the item) or (0, None)."""
+    b = _battle()
+    state = b.battleInfo[discordID].get('item') if b.battleExists(discordID) else None
+    if not reward or not state or state["data"]["effect"] != "grist_bonus":
+        return 0, None
+    return math.ceil(reward * state["data"]["percent"] / 100), state["data"]
 
 
 def hitLanded(discordID, side, actor, abilityName, foeSide, target):

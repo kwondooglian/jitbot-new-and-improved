@@ -121,7 +121,7 @@ SSSR_MAX_GIF = "https://media.discordapp.net/attachments/1442548563879133357/146
 R_HOMESTUCK_GIF = "https://media.discordapp.net/attachments/907662210619289600/1572833434982817802/R_HOMESTUCK.gif?ex=6affcec8&is=6afe7d48&hm=ca625cfb04880771fd058c6b5d9ff076c2781b5c117970f0a9152d4ade002888"
 R_MAX_GIF = "https://media.discordapp.net/attachments/907662210619289600/1572833434357727273/R_MAX2.gif?ex=6affcec8&is=6afe7d48&hm=e52418210d467478e525be4e53f2c69e93381a93178ec72f27427d9ffb7f2005"
 R_JAIDEN_GIF = "https://media.discordapp.net/attachments/907662210619289600/1572833434643202190/R_JAIDEN.gif?ex=6affcec8&is=6afe7d48&hm=2734c1b5863d9073f6402b039175ba1e8a9f77356c484ef07962dffd7b6f7933"
-SR_BINKTOP_GIF = ""  # put the gif's web link here once there is one (/char shows no picture until then)
+SR_BINKTOP_GIF = "https://cdn.discordapp.com/attachments/907662210619289600/1573813352096989287/SR_BINKTOP.gif?ex=6b035f67&is=6b020de7&hm=4a67c5ce7dd236e655fecd00395fac6965e21b6c082a1a8f7a71d4029e412791&"
 
 
 
@@ -158,7 +158,7 @@ enemyAttributes = {
     "Spearman": [175, 5, 5, 2, 0, 80, "Punch", "Swipe, Deal 20 damage to all party members", "Stab, Apply 15%% attack damage bonus to self for this turn and deal damage"],
     "Agent": [175, 15, 5, 2, 0, 80, "Punch", "Sneak, Add 15%% evasion to self for next 4 turns, then use Punch"],
     "Jack Noir": [1000, 30, 10, 3, 5, 90, "Stab", "Shiv, Deal damage and apply bleed to player (-3% hp per turn) for one turn, this can stack", "Slash, Deal only 5 damage to all party members, but apply bleed to all party members for one turn.", "Extra Passive: Attack lowest health party member each turn"],
-    "Garry's Mod": [650, 45, 45, 2, 0, 85, "Hit, Deal 50% of atk to a targeted enemy", "Addon-Smash!, Rear up for 1 turn then come crashing down on a targeted enemy for full atk", "Passive: Every 161 damage taken, summon an Addonshield in front of himself"],
+    "Garry's Mod": [650, 70, 65, 2, 0, 85, "Hit, Deal 50% of atk to a targeted enemy", "Addon-Smash!, Rear up for 1 turn then come crashing down on a targeted enemy for full atk", "Passive: Every 161 damage taken, summon an Addonshield in front of himself"],
     "Addonshield": [100, 0, 15, 1, 0, 0, "Draw Attack, The player team's attacks on Garry's Mod hit the Addonshield instead"]
 }
 

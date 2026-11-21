@@ -15,7 +15,7 @@ import traceback
 from battle import *
 from utils import *
 from banner_helper import loadBanners, findBanner, pickCharacter, getRarity, shortDescription, RARITY_ORDER
-from item_helper import loadItems, findItem, itemTitle, ownedItems, isUnequip, rollItemDrops, SHOP_IMAGE, MAX_STORE_ITEMS
+from item_helper import loadItems, findItem, itemTitle, ownedItems, isUnequip, rollItemDrops, gristBonus, SHOP_IMAGE, MAX_STORE_ITEMS
 import daily_helper
 
 load_dotenv("token.env")
@@ -1555,15 +1555,17 @@ def hp_bar(hp, max_hp, length=10):
     return "█" * filled + "░" * (length - filled)
 
 
-def format_battle_units(rows):
-    """One line per character with their hp bar, plus a line under it for their buffs/debuffs."""
+def format_battle_units(rows, hide_hp=False):
+    """One line per character with their hp bar, plus a line under it for their buffs/debuffs.
+    hide_hp (Noah's Larpometer) shows ??? instead of the hp bar and numbers."""
     lines = []
     for row in rows:
         if not row["alive"]:
             lines.append(f"~~{row['name']}~~ 💀")
             continue
         marker = "▶ " if row["current"] else ""
-        lines.append(f"{marker}**{row['name']}** `{hp_bar(row['hp'], row['maxHp'])}` {row['hp']}/{row['maxHp']}")
+        hp = "`??????????` ???" if hide_hp else f"`{hp_bar(row['hp'], row['maxHp'])}` {row['hp']}/{row['maxHp']}"
+        lines.append(f"{marker}**{row['name']}** {hp}")
         if row["effects"]:
             effects = row["effects"] if len(row["effects"]) <= 150 else row["effects"][:147] + "..."
             lines.append(f"   ↳ {effects}")
@@ -1591,8 +1593,8 @@ def build_battle_embed(user_id, enemy_name, prompt=None, ending=None):
         embed.description, embed.colour = BATTLE_ENDINGS[ending]
     else:
         embed.description = prompt or f"It's **{summary['turn']}**'s turn, pick an ability!"
-    embed.add_field(name="Your Team", value=format_battle_units(summary["players"]), inline=False)
-    enemies_text = format_battle_units(summary["enemies"])
+    embed.add_field(name="Your Team", value=format_battle_units(summary["players"], summary["hideHP"]), inline=False)
+    enemies_text = format_battle_units(summary["enemies"], summary["hideHP"])
     if summary["field"]:
         enemies_text = (enemies_text + "\n" + summary["field"])[:1024]
     embed.add_field(name="Enemies", value=enemies_text, inline=False)
@@ -1737,14 +1739,17 @@ class BattleView(discord.ui.View):
     def end_battle(self, ending):
         """Cleans up the battle in battle.py, sets inBattle back to false and disables every button.
         A victory also gives the Grist reward, the text about it is returned for the embed."""
+        # grist_bonus items (Noah's Larpometer), asked before battle.py throws the battle (and its equipped item) away
+        bonus, bonus_item = gristBonus(self.user_id, self.grist_reward)
         if battleExists(self.user_id):
             endBattle(self.user_id, BATTLE_END_REASONS[ending])
         # set in mongodb battle over (and add the Grist in the same update when they won)
         update = {"$set": {"inBattle": False}}
         reward_text = ""
         if ending == "victory" and self.grist_reward:
-            update["$inc"] = {"grist": self.grist_reward}
-            reward_text = f"\n💰 You got **{self.grist_reward}** Grist! Spend it in **/item store**."
+            update["$inc"] = {"grist": self.grist_reward + bonus}
+            bonus_text = f" (+{bonus} from **{itemTitle(bonus_item)}**)" if bonus else ""
+            reward_text = f"\n💰 You got **{self.grist_reward + bonus}** Grist{bonus_text}! Spend it in **/item store**."
         inventory_collection.update_one(
             {"user_id": self.user_id},
             update

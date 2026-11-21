@@ -168,6 +168,8 @@ def enemyTurn(discordID):
   info['skipEnemyTurn'] = False
   if skipped:
     addLog(discordID, "⛔ The enemies' turn was skipped!")
+  else:
+    skipped = item_helper.enemiesSkipTurn(discordID)  # skip_enemy_turns items (Samsung Camera) skip their first turns
 
   # get first enemy then next enemy until all have gone (nobody when the turn was skipped)
   for enemy in ([] if skipped else list(battleStats[discordID]['enemies'].keys())):
@@ -1244,6 +1246,7 @@ def getBattleSummary(discordID):
     "enemies": unitRows('enemies'),
     "field": f"🌀 Void Spot: {spot['power']}% power, bursts in {spot['turns']}t" if spot else None,
     "log": list(battleLog[discordID]),
+    "hideHP": item_helper.hidesHP(discordID),  # hide_hp items (Noah's Larpometer) hide everyone's HP in the embed
     # summoned enemies that are still standing, for drawing them on the battle screen: [(kind, slot)]
     "summoned": [(stats['kind'], stats['slot']) for stats in battleStats[discordID]['enemies'].values()
                  if stats.get('summoner') and stats['ehp'] > 0],

@@ -130,6 +130,28 @@ add_banner(
         "sr_homestuck",
         "sr_abraize",
         "sr_trey",
+        # R
+        "r_abraize",
+        "r_abraize2",
+        "r_trey",
+        "r_noah",
+        "r_freeman",
+        "r_stephen",
+        "r_homestuck",
+        "r_max",
+        "r_jaiden",
+    ],
+)
+
+add_banner(
+    name = "Bullshit Banner",
+    description = "The everyday banner. All of the regular R, SR and SSR characters can be pulled here.",
+    image = "https://cdn.discordapp.com/attachments/907662210619289600/1573813352096989287/SR_BINKTOP.gif?ex=6b035f67&is=6b020de7&hm=4a67c5ce7dd236e655fecd00395fac6965e21b6c082a1a8f7a71d4029e412791&",
+    color = "#caff09",
+    ssr_rate = 0,
+    sr_rate = 10,
+    r_rate = 90,
+    contents = [
         "sr_binktop",
         # R
         "r_abraize",

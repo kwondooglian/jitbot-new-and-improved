@@ -85,6 +85,9 @@ Players buy items with **Grist** in **/item store**, put one in their team's ite
 | Dersite Knuckledusters | 20 | +5% ACC for every team member |
 | Protein Brick | 75 | +50% ATK for every team member, but every turn there's a 50% chance the whole team hits themselves in the head with it and skips its turn |
 | Knife Noir | Not sold | Every hit from a character's basic attack (their first move, like Punch or Dropkick) gives the enemy a stack of Bleed: 3% of its max HP at the end of the turn. Has a 10% chance to drop when you beat Jack Noir |
+| Noah's Larpometer | 65 | +10% Grist for every battle your team wins (rounded up), but nobody's HP can be seen during battles |
+| Samsung Camera | 40 | The enemy team skips its first turn of each battle |
+| Huawei Laptop | 90 | Your whole team skips its first 3 turns of each battle, then gets +25% ATK, 25% less damage taken and +25% ACC for the rest of the battle |
 
 How items work:
  - A player can own one of each item. Equipping doesn't use the item up, and swapping puts the old item back with their other items.
@@ -163,10 +166,15 @@ To **change** an item, hover over its document in Compass, click the pencil, cha
 | `crit_chance` | Every hit the team lands has a chance to be a critical hit | `chance` (the %), `multiplier` (1.5 = 1.5x damage) |
 | `periodic_heal` | Every few turns, everyone on the team heals a % of their max HP | `every` (5 = turns 5, 10, 15...), `percent` |
 | `basic_attack_bleed` | Every hit from a basic attack (each character's first move) gives the enemy a stack of Bleed | `percent` (of the enemy's max HP), `turns` |
+| `grist_bonus` | More Grist for every battle the team wins (rounded up) | `percent` |
+| `skip_enemy_turns` | The enemy team skips its first few turns of each battle | `turns` |
+| `delayed_stat_percent` | Like stat_percent, but it only starts after the first few turns and then lasts the rest of the battle | the stats, plus `turns` (3 = it starts on turn 4) |
 
  - What the stat numbers do: `hp` and `attack` are a % with stat_percent and a flat amount with stat_flat. `defense` always means the team takes that % less damage. `evasion` and `accuracy` are added onto the % chance to dodge or hit. The short names `atk`, `def`, `eva` and `acc` work too.
  - **in_store**, **drop_from** and **drop_chance** (optional): for an item that can't be bought and drops from an enemy instead, like Knife Noir. Use `"in_store": false`, the /battle enemy like `"drop_from": "Jack Noir"` and the % chance like `"drop_chance": 10`.
  - **skip_chance** and **skip_text** (optional): a downside like the Protein Brick has. skip_chance is the % chance every turn that the whole team skips its turn, and skip_text is what the battle log says when it happens.
+ - **skip_turns** (optional): a downside like the Huawei Laptop has. The whole team always skips its first that many turns of each battle, like `"skip_turns": 3`. skip_text works with it too.
+ - **hide_hp** (optional): a downside like Noah's Larpometer has. With `"hide_hp": true` (Boolean in Compass) nobody's HP can be seen in the battle embed.
 
 Good to know:
  - Adding or changing items needs a **restart** of the bot. You need **/syncapp** once, the first time you run this version of the bot, because /item is a new command. After a /syncapp remember to reload Discord with CTRL + R.
