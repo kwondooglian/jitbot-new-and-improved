@@ -33,7 +33,8 @@ OPTIONAL_FIELDS = ["price",                         # needed for every item that
                    "drop_from", "drop_chance",      # a /battle enemy that can drop it when you win, and the % chance
                    "skip_chance", "skip_text",      # a downside any item can have (Protein Brick)
                    "skip_turns",                    # a downside: the team skips its first few turns (Huawei Laptop)
-                   "hide_hp"]                       # a downside: nobody's HP can be seen during battles (Noah's Larpometer)
+                   "hide_hp",                       # a downside: nobody's HP can be seen during battles (Noah's Larpometer)
+                   "max_stacks"]                    # the most Bleed stacks 1 enemy can have from it at once (Knife Noir)
 
 # The /battle enemies an item can drop from ("Ruffian1" and "Ruffian2" are both "Ruffian")
 ENEMY_NAMES = sorted({enemy.rstrip("0123456789") for enemy in enemyAttributes})
@@ -121,7 +122,7 @@ STARTING_ITEMS = [
     {"name": "Knife Noir", "in_store": False, "drop_from": "Jack Noir", "drop_chance": 10,
      "description": "Jack Noir's own knife, taken from him after a hard fight. Afflict bleed via stabbing during every basic attack.",
      "emoji": "🗡️", "image": "graphics/items/knifenoir.png",
-     "effect": "basic_attack_bleed", "percent": 3, "turns": 1},
+     "effect": "basic_attack_bleed", "percent": 3, "turns": 1, "max_stacks": 3},
     {"name": "Noah's Larpometer", "price": 65,
      "description": "Noah's very own Larp Meter. It's so busy measuring everyone's performativeness that nobody can read their HP anymore.",
      "emoji": "📟", "image": "graphics/items/noahslarpometer.png",
@@ -130,7 +131,7 @@ STARTING_ITEMS = [
      "description": "A point-and-shoot camera. The flash catches the enemies off guard before the fight even starts.",
      "emoji": "📷", "image": "graphics/items/camera.png",
      "effect": "skip_enemy_turns", "turns": 1},
-    {"name": "Huawei Laptop", "price": 90,
+    {"name": "Huawei Laptop", "in_store": False, "drop_from": "Garry's Mod", "drop_chance": 10,
      "description": "A Huawei laptop with Garry's Mod open. It takes forever to boot, but once it's running your team is unstoppable.",
      "emoji": "💻", "image": "graphics/items/huaweilaptop.png",
      "effect": "delayed_stat_percent", "attack": 25, "defense": 25, "accuracy": 25, "turns": 3,
@@ -302,6 +303,11 @@ def checkItem(typed):
     if not isinstance(hideHP, bool):
         return skip('hide_hp has to be true or false (the Boolean type in Compass), like "hide_hp": true')
     item["hide_hp"] = hideHP
+    # the most stacks of Bleed one enemy can have at once from basic_attack_bleed (Knife Noir), 0 = no limit
+    maxStacks = typed.get("max_stacks", 0)
+    if not isWholeNumber(maxStacks) or maxStacks < 0:
+        return skip('max_stacks has to be a whole number of 0 or more, like "max_stacks": 3.' + typeHint(maxStacks))
+    item["max_stacks"] = int(maxStacks)
     skipText = typed.get("skip_text")
     if skipText is not None and not skipChance and not skipTurns:
         warn(f"{where}: skip_text only does something when the item has a skip_chance or skip_turns, so it was ignored.")
@@ -409,8 +415,9 @@ def mainEffectText(item):
         return f"{when}, each team member heals {item['percent']:g}% of their max HP"
     if effect == "basic_attack_bleed":
         when = "at the end of the turn" if item["turns"] == 1 else f"at the end of each turn for {item['turns']} turns"
+        limit = f" (up to {item['max_stacks']} stacks at once)" if item.get("max_stacks") else ""
         return (f"Every hit from your team's basic attacks (each character's first move, like Punch or Dropkick) "
-                f"gives the enemy a stack of Bleed, which takes {item['percent']:g}% of its max HP {when}")
+                f"gives the enemy a stack of Bleed{limit}, which takes {item['percent']:g}% of its max HP {when}")
     return effect
 
 
@@ -608,20 +615,30 @@ def hitLanded(discordID, side, actor, abilityName, foeSide, target):
     if not b.isAlive(discordID, foeSide, target) or b.isDebuffImmune(discordID, foeSide, target):
         return ""
     item = state["data"]
+    # max_stacks: an enemy that already has that many stacks of Bleed doesn't get another one
+    stacks = sum(1 for effect in b.getEffects(discordID, foeSide, target) if effect['kind'] == 'dot' and effect['name'] == "Bleed")
+    if item.get("max_stacks") and stacks >= item["max_stacks"]:
+        return ""
     # the same kind of Bleed as Jack Noir's (endRound() in battle.py does the damage), every hit adds another stack
     b.addLingering(discordID, foeSide, target, {"name": "Bleed", "percent": item["percent"], "turns": item["turns"], "stackable": True})
     return f"{icon(item)} **{b.displayName(discordID, foeSide, target)}** is bleeding"
 
 
-def criticalHit(discordID, side, damage):
-    """hostileMove() calls this once an attack has landed. crit_chance items can turn it into a critical hit.
+def criticalHit(discordID, side, actor, damage):
+    """hostileMove() calls this once an attack has landed. crit_chance items can turn it into a critical hit, and so can the
+    critical chance a move gave the attacker (SSR Casey's Ballad of Fortune and Grand Finale), all the chances are added together.
     Returns (damage, extra text for the battle log)."""
-    if side != 'players':
+    b = _battle()
+    chance, multiplier = 0, 1
+    state = b.battleInfo[discordID].get('item')
+    if side == 'players' and state and state["data"]["effect"] == "crit_chance":
+        chance, multiplier = state["data"]["chance"], state["data"]["multiplier"]
+    for effect in b.getEffects(discordID, side, actor):
+        if effect.get("critChance"):
+            chance += effect["critChance"]
+            multiplier = max(multiplier, effect["critMultiplier"])
+            if effect.get("critNextHit"):
+                b.removeEffect(discordID, effect)  # Grand Finale: only the first hit that lands
+    if random.uniform(0, 100) >= chance:
         return damage, ""
-    state = _battle().battleInfo[discordID].get('item')
-    if not state or state["data"]["effect"] != "crit_chance":
-        return damage, ""
-    item = state["data"]
-    if random.uniform(0, 100) >= item["chance"]:
-        return damage, ""
-    return max(1, round(damage * item["multiplier"])), " 💥 **Critical hit!**"
+    return max(1, round(damage * multiplier)), " 💥 **Critical hit!**"

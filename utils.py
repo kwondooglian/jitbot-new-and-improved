@@ -5,20 +5,22 @@ Technically every character that exists HERE must actually exist below
 abraizeChar = ["r_abraize", "r_abraize2", "sr_abraize", "ssr_abraize"]
 treyChar = ["r_trey", "ssr_trey"]
 noahChar = ["r_noah", "sr_noah"]
-freemanChar = ["r_freeman", "sr_freeman"]
+freemanChar = ["r_freeman", "r_freeman2", "sr_freeman"]
 stephenChar = ["r_stephen", "sr_stephen"]
 jaydenChar = ["ssr_jayden", "r_jaiden"]
 homestuckChar = ["r_homestuck", "sr_homestuck"]
 scottieChar = ["ssr_scottie"]
 maxChar = ["r_max", "sssr_max"]
 binktopChar = ["sr_binktop"]
+caseyChar = ["ssr_casey"]
+stevenChar = ["ssr_steven"]
 '''
 
 # Characters that exists here are every character in the game but in each section
-rChar = ["r_abraize", "r_abraize2", "r_trey", "r_noah", "r_freeman", "r_stephen", "r_homestuck", "r_max", "r_jaiden"]
+rChar = ["r_abraize", "r_abraize2", "r_trey", "r_noah", "r_freeman", "r_stephen", "r_homestuck", "r_max", "r_jaiden", "r_freeman2"]
 srChar = ["sr_freeman", "sr_stephen", "sr_homestuck", "sr_abraize", "sr_trey", "sr_noah", "sr_binktop"]
 ssrChar = ["ssr_abraize", "ssr_trey", "ssr_jayden"]
-specialChar = ["ssr_scottie"]
+specialChar = ["ssr_scottie", "ssr_casey", "ssr_steven"]
 secretChar = ["sssr_max"]
 
 # Character Titles for displaying to user
@@ -41,20 +43,26 @@ characterTitles = {
     "r_homestuck": "[Tour of a Lifetime] Homestuck",
     "r_max": "[I can make a-] Max Yakuvobich",
     "r_jaiden": "[Picked up, Packed up] Jaiden Ceballos",
+    "r_freeman2": "[On the Run] Freeman",
     "ssr_scottie": "[Overwhelming Dread] Scottie Jenkins",
     "sr_binktop": "[Saviour of the Digital Realm] Binktop",
+    "ssr_casey": "[Even if I don't have to, I will] Casey Cranberry",
+    "ssr_steven": "[Reopen Old Wounds] Steven Toony",
     "sssr_max": "[???] ???"
 }
 
 backgrounds = {
     "purple1": "./graphics/battle/purple1.png",
     "purple2": "./graphics/battle/purple2.png",
-    "garrysmod": "./graphics/battle/garrysmodbackground.png"
+    "garrysmod": "./graphics/battle/garrysmodbackground.png",
+    "dersiteroyalty": "./graphics/battle/dersiteroyaltybackground.png"
 }
 # /battle uses purple2, unless the enemy has its own background here
 DEFAULT_BACKGROUND = "purple2"
 enemyBackgrounds = {
     "Garry's Mod": "garrysmod",
+    "Teniente": "dersiteroyalty",
+    "Conquistador": "dersiteroyalty",
 }
 
 characterImages ={
@@ -77,7 +85,10 @@ characterImages ={
     "r_homestuck": "./graphics/battle/r_homestuck.png",
     "r_max": "./graphics/battle/r_max.png",
     "r_jaiden": "./graphics/battle/r_jaiden.png",
-    "sr_binktop": "./graphics/battle/sr_binktop.png"
+    "r_freeman2": "./graphics/battle/r_freeman2.png",
+    "sr_binktop": "./graphics/battle/sr_binktop.png",
+    "ssr_casey": "./graphics/battle/ssr_casey.png",
+    "ssr_steven": "./graphics/battle/ssr_steven.png"
 }
 enemyImages = {
     "RuffianBack": "./graphics/battle/ruffianBack.png",   # file names match the capital letters of the real files
@@ -87,7 +98,9 @@ enemyImages = {
     "Agent": "./graphics/battle/agent.png",
     "Jack Noir": "./graphics/battle/jackNoir.png",
     "Garry's Mod": "./graphics/battle/gmod.png",
-    "Addonshield": "./graphics/battle/addonshield.png"
+    "Addonshield": "./graphics/battle/addonshield.png",
+    "Teniente": "./graphics/battle/teniente.png",
+    "Conquistador": "./graphics/battle/conquistador.png"
 }
 
 # Character Banner GIFs
@@ -121,6 +134,9 @@ SSSR_MAX_GIF = "https://media.discordapp.net/attachments/1442548563879133357/146
 R_HOMESTUCK_GIF = "https://media.discordapp.net/attachments/907662210619289600/1572833434982817802/R_HOMESTUCK.gif?ex=6affcec8&is=6afe7d48&hm=ca625cfb04880771fd058c6b5d9ff076c2781b5c117970f0a9152d4ade002888"
 R_MAX_GIF = "https://media.discordapp.net/attachments/907662210619289600/1572833434357727273/R_MAX2.gif?ex=6affcec8&is=6afe7d48&hm=e52418210d467478e525be4e53f2c69e93381a93178ec72f27427d9ffb7f2005"
 R_JAIDEN_GIF = "https://media.discordapp.net/attachments/907662210619289600/1572833434643202190/R_JAIDEN.gif?ex=6affcec8&is=6afe7d48&hm=2734c1b5863d9073f6402b039175ba1e8a9f77356c484ef07962dffd7b6f7933"
+R_FREEMAN2_GIF = "https://cdn.discordapp.com/attachments/907662210619289600/1573984017836150864/R_FREEMAN2.gif?ex=6b03fe59&is=6b02acd9&hm=bcd9fe7a84ee5e7f70eb12a3522b77619be63699e0ce18d87219f6d52b28d46e&"
+SSR_CASEY_GIF = "https://media.discordapp.net/attachments/907662210619289600/1468808958016880904/SSR_CASEY_AGAIN.gif?ex=6b05abb0&is=6b045a30&hm=8c9e5aa0f30b25727c0ae6efbc1b75d269288981deb83b16f77c64a7ae9a3f0e"  # put the link to the gif here
+SSR_STEVEN_GIF = "https://media.discordapp.net/attachments/1426812344549380136/1456530363277906000/SSR_STEVEN.gif?ex=6b05d35b&is=6b0481db&hm=10597e416aba519858b7bb20ff686cd77a5b4cc7b22dffc6c5d4a0d438762f8f"  # put the link to the gif here
 SR_BINKTOP_GIF = "https://cdn.discordapp.com/attachments/907662210619289600/1573813352096989287/SR_BINKTOP.gif?ex=6b035f67&is=6b020de7&hm=4a67c5ce7dd236e655fecd00395fac6965e21b6c082a1a8f7a71d4029e412791&"
 
 
@@ -133,7 +149,9 @@ enemySpots = {
     "Spearman": (15, 145),
     "Agent": (20, 150),
     "Jack Noir": (0, 150),
-    "Garry's Mod": (0, 37)
+    "Garry's Mod": (0, 37),
+    "Teniente": (0, 59),       # his picture is 360 tall, this puts his feet on the bottom like the others
+    "Conquistador": (0, 0)
 }
 
 # Enemies that get summoned during a battle (Garry's Mod's Addonshields) are drawn onto the battle screen when they show up:
@@ -158,8 +176,16 @@ enemyAttributes = {
     "Spearman": [175, 5, 5, 2, 0, 80, "Punch", "Swipe, Deal 20 damage to all party members", "Stab, Apply 15%% attack damage bonus to self for this turn and deal damage"],
     "Agent": [175, 15, 5, 2, 0, 80, "Punch", "Sneak, Add 15%% evasion to self for next 4 turns, then use Punch"],
     "Jack Noir": [1000, 30, 10, 3, 5, 90, "Stab", "Shiv, Deal damage and apply bleed to player (-3% hp per turn) for one turn, this can stack", "Slash, Deal only 5 damage to all party members, but apply bleed to all party members for one turn.", "Extra Passive: Attack lowest health party member each turn"],
-    "Garry's Mod": [650, 70, 65, 2, 0, 85, "Hit, Deal 50% of atk to a targeted enemy", "Addon-Smash!, Rear up for 1 turn then come crashing down on a targeted enemy for full atk", "Passive: Every 161 damage taken, summon an Addonshield in front of himself"],
-    "Addonshield": [100, 0, 15, 1, 0, 0, "Draw Attack, The player team's attacks on Garry's Mod hit the Addonshield instead"]
+    "Garry's Mod": [650, 70, 65, 2, 0, 85, "Hit, Deal 50% of atk to a targeted enemy", "Addon-Smash!, Rear up for 1 turn then come crashing down on all enemies for full atk", "Passive: Every 161 damage taken, summon an Addonshield in front of himself"],
+    "Addonshield": [100, 0, 15, 1, 0, 0, "Draw Attack, The player team's attacks on Garry's Mod hit the Addonshield instead"],
+    "Teniente": [450, 40, 20, 2, 2, 95, "Thrust, Basic attack", "Code of Honour, +15% atk and def for himself and 1 party member, then he Thrusts at them (he only attacks them this turn)", "Riposte, Until the end of his next turn every hit on him costs the attacker 30 + 10% of their max hp, ends his turn"],
+    "Conquistador": [600, 60, 60, 2, 0, 85, "Slash, Attack all party members with 25% less power", "Stab, Attack 1 party member", "Battle Cry, -35% def for every party member for 1 turn, his next move is a Stab or a Slash", "Passive: Loot & Pillage, Every party member that goes down while he is standing steals 10 Grist, beating him gets it all back"]
+}
+
+# Enemies that steal Grist (the Conquistador's Loot & Pillage): every party member that goes down while this enemy is standing
+# takes that much Grist from the player. Beating the battle gets all of it back, losing / retreating / timing out loses it
+enemyLoot = {
+    "Conquistador": 10,
 }
 
 # Grist the player gets for WINNING a /battle (losing, retreating or timing out gives nothing)
@@ -173,7 +199,16 @@ gristRewards = {
     "Grunt": 15,
     "Jack Noir": 35,
     "Garry's Mod": 50,
+    "Teniente": 18,
+    "Conquistador": 22,
 }
+# Bosses: once a player has beaten a boss BOSS_FULL_REWARD_WINS times, that boss only gives them half Grist (rounded up)
+# for BOSS_HALF_REWARD_HOURS hours, after that their wins against it count from 0 again
+# (every player's wins are counted per boss, in "boss_wins" on their inventory document in MongoDB,
+#  and when their half Grist ends in "boss_half_until")
+bossEnemies = ["Jack Noir", "Garry's Mod"]
+BOSS_FULL_REWARD_WINS = 5
+BOSS_HALF_REWARD_HOURS = 24
 
 # How much Grist 1 roll costs in /item store (a whole number above 0)
 rollPrice = 15
@@ -202,7 +237,10 @@ characterAttributes = {
     "r_homestuck": [140, 11, 7, 5, 90, "Punch", "Spotlight Shift", "Rules for thee"],
     "r_max": [165, 10, 13, 2, 90, "Punch", "Brick Eating", "Tour Alliance"],
     "r_jaiden": [120, 9, 10, 3, 90, "Punch", "Pick Up", "Commitment and Fuck"],
+    "r_freeman2": [100, 8, 8, 20, 65, "Running Slap", "Huss", "Charging Tackle"],
     "sr_binktop": [270, 20, 25, 0, 90, "Viruslash", "McAfee 265+ Antivirus Shield", "Premium Subscription Malware Annihilating Slash"],
+    "ssr_casey": [325, 20, 30, 5, 95, "Music Box", "Ballad of Fortune", "Refrain", "Grand Finale"],
+    "ssr_steven": [210, 45, 19, 5, 90, "Wrathful Swipe", "Gussy Charge", "Ragebait", "Reopen Old Wounds"],
     "sssr_max": ["?", "??", "???", "???", "???", "???", "???", "???", "???", "?????"]
 }
 
@@ -231,15 +269,27 @@ characterAttributes = {
 #            Hits 1 enemy (all of them with Option B) and rolls accuracy vs evasion
 #            numbers: "power" = % of attack used (default 100), "damage" = flat damage instead of the attack stat,
 #                     "percentMaxHP" / "percentCurrentHP" = damage is a % of the target's hp, "trueDamage" = ignores defense buffs,
+#                     "plusPercentCurrentHP" = that % of the target's current hp gets added on top (SR Freeman's Shoot),
+#                     "stun" = a hit that lands Stuns the target for that many turns (it skips its turns, R Freeman2's Charging Tackle),
+#                     "missSelfDamage" = if the attack misses (or is evaded) the user takes that much damage (it can't knock them out),
 #                     "sureHit" = can't miss or be evaded, "recoil" = % of the damage dealt that the user takes too,
 #                     "hits" = how many times each target gets hit (each hit rolls to hit on its own, SR Binktop's Viruslash),
-#                     "hitDebuff": {"name", "chance", "debuff", "turns"} = every hit that lands has a chance to debuff the target (Code Rot)
+#                     "hitDebuff": {"name", "chance", "debuff", "turns"} = every hit that lands has a chance to debuff the target (Code Rot),
+#                     "bonusVsDebuffed": {stat: %} = that much more damage if the target has a debuff on that stat (SSR Casey's Music Box),
+#                     "foeBuff": {stat: %} = the target that was hit gets that buff for "turns" (SSR Steven's Wrathful Swipe)
 # Option B = Area of Effect at Enemies
 # Option C = Area of Effect at Teammates
 # Option D = Buff: the whole team with Option C, one picked teammate with Option G, otherwise yourself
 #            numbers: "buff": {stat: %}, "turns", "heal" = % of max hp healed, "debuffImmune" = can't be debuffed while it lasts,
 #                     "damageImmune" = can't take any damage while it lasts (hits, Burn, Bleed), paying your own hp still works,
-#                     "sureHitsNextTurn": "status name" = every attack they make on their next turn hits (R Jaiden's Commitment)
+#                     "sureHitsNextTurn": "status name" = every attack they make on their next turn hits (R Jaiden's Commitment),
+#                                         a move's own chances ("accuracy", Option O "chance" / "outcomes") are still rolled,
+#                     "allyBuff": {stat: %} = a different buff for every other teammate at the same time (R Freeman2's Huss, SSR Trey's Shroud),
+#                     "crit": {"name", "chance", "multiplier", "nextHit"} = a status that adds to the chance of a critical hit (it works
+#                             like Lucky Coin and adds on top of it), "nextHit" = it lasts until their next hit that lands instead of "turns",
+#                     "refrain": % = Refrain: the next attack they use is remembered, using it again does that much more damage (once),
+#                     "reverseDebuffs" = debuffs turn into buffs (Burn / Bleed heal instead) for as long as they had left,
+#                     "coversTheirTurn" = a teammate who already went this round keeps it through their next turn (Ballad of Fortune)
 # Option E = Debuff: every enemy with Option B, one picked enemy with Option F (or the enemy hit by Option A),
 #            with no target letter it lands on yourself (or a random teammate with Option O "randomAlly")
 #            numbers: "debuff": {stat: %}, "turns"
@@ -247,6 +297,7 @@ characterAttributes = {
 #             that is how Thief can debuff all enemies AND buff the whole team in 1 move)
 # Option F = Specific Target on opposing team (the player picks with buttons when there is more than 1, enemies pick on their own)
 # Option G = Specific Target on own team (the player picks with buttons when there is more than 1)
+#            numbers: "othersOnly" = the user can't pick themselves (SSR Casey)
 # Option H = Cooldown before you can use the same move again, numbers: "cooldown" = how many turns
 # Option I = Stacks of same kind on targets which works with 1 or multiple targets
 #            numbers: "stacks": {"name", "add", "max", "turns", "perStack": {stat: % for each stack}, "resetOnOtherMove", "loseStackWhenHit"}
@@ -258,7 +309,8 @@ characterAttributes = {
 # Option L = Taunt: the other side's single target attacks have to go at you, numbers: "taunt" = how many turns
 #            (an enemy taunting, like Addonshield's Draw Attack, makes the party's attacks on its teammates hit it instead)
 # Option M = Lingering effect that does something every turn, numbers: "lingering": {...}
-#            "Burn" / "Bleed" = lose "percent" of max hp every turn (lands on the other side like Option E, "stackable" lets it stack)
+#            "Burn" / "Bleed" = lose "percent" of max hp every turn (lands on the other side like Option E, "stackable" lets it stack,
+#                               "stacks" = how many of it land at once)
 #            "Regeneration" with "heal": True = heal "percent" of max hp every turn (lands on your side like Option D)
 #            "Void Spot" (SSR Trey) = sits on the field, ranged attacks miss and power it up, it grows every turn and then bursts
 # Option N = Interrupt: "interrupt": {"name", "chance", "guardsAllies", "counter"} = a status with a chance to cancel an enemy
@@ -283,6 +335,10 @@ characterAttributes = {
 # Other numbers any move can have
 #   "turns" = how long buffs/debuffs last (default 1, 0 = only for the rest of the current turn)
 #   "once" = can only be used once per battle (ultimates)
+#   "requiresRound" = can only be used from that turn on (Nihilism, Grand Finale, Reopen Old Wounds)
+#   "selfDebuff": {stat: %} = a debuff on the user for "turns", whatever the move does to the enemies (SSR Steven's Gussy Charge)
+#   "ragebait": % = the chance the Option F enemy attacks 1 of its allies (itself if it has none), otherwise it attacks your whole team
+#   "repeatDamage" = the damage your team's moves did last turn hits the same enemies again (SSR Steven's Reopen Old Wounds)
 #   "extraTurn" = the user goes again straight away
 #   "selfDamage" = flat hp the user pays, "selfHeal" = % of max hp the user heals, "selfHealHP" = flat hp the user heals
 #   "allyCost" = every other teammate pays that % of their max hp (it can't knock them out)
@@ -299,6 +355,14 @@ characterAttributes = {
 #   "channel": {"skipTurns", "damage", "percentMaxHP", "stunTurns"} = Channeling: your next "skipTurns" turns are skipped and getting hit
 #            cancels it (you can act again), if it runs out you hit the Option F enemy for damage + % of its max hp, then you're Stunned
 #            (SR Binktop's Annihilating Slash)
+#   "duel": {stat: %} = challenge 1 random unit of the other side: you and they both get that buff for "turns", and your single
+#            target attacks only go at them for the rest of this turn (the Teniente's Code of Honour)
+#   "riposte": % = for "turns", every hit that lands on you costs the attacker that % of their own max hp (the Teniente's Riposte)
+#            "riposteFlat" = that much damage on top of it
+#   "goesFirst" = enemies only: when the enemy picks this move it happens before its other moves that turn (the Teniente's Code of Honour)
+#   "endsTurn" = enemies only: using the move ends the enemy's turn, its other moves that turn don't happen (the Teniente's Riposte)
+#   "nextMove": [move names] = enemies only: the enemy's next move is one of these (picked at random), even when it is
+#            next turn (Code of Honour -> Thrust, the Conquistador's Battle Cry -> Stab or Slash)
 
 # Options D and E are Basic buffs meaning they only change the 5 main stats of HP, Attack, Defense, Evasion, and Accuracy
 # These are the stat codes used inside "buff" / "debuff":
@@ -318,25 +382,25 @@ characterAbilities = {
     "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
     # Evasion drops to 0% and you skip your next turn, then wake up with +15% atk and def for 2 turns
     "Sleep": ['E', 'K', {"debuff": {"EE": 100}, "turns": 2, "sleepTurns": 1, "wakeBuff": {"BB": 15, "CC": 15}, "wakeTurns": 2}],
-    "Missing Assignments": ['D', {"buff": {"DD": 5}, "turns": 1}]   # +5% accuracy to self for 1 turn
+    "Missing Assignments": ['D', {"buff": {"DD": 5}, "turns": 2}]   # +5% accuracy to self for 2 turns
   },
   "r_abraize2": {
     "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
-    "Eat Note": ['D', {"buff": {"EE": 10}, "turns": 1, "selfDamage": 25}],  # +10% evasion to self for 1 turn, costs 25 hp
+    "Eat Note": ['D', {"buff": {"EE": 10}, "turns": 2, "selfDamage": 25}],  # +10% evasion to self for 2 turns, costs 25 hp
     # +10% atk and def for the whole team for 3 turns, 4 turn cooldown
     "Productivity Time": ['C', 'D', 'H', {"buff": {"BB": 10, "CC": 10}, "turns": 3, "cooldown": 4}]
   },
   "sr_abraize": {
     "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
     "Slow": ['E', 'F', {"debuff": {"DD": 15}, "turns": 2}],         # -15% accuracy to 1 enemy for 2 turns
-    # 15% chance to work: heals self for 50% and gives the whole team +20% atk for 1 turn
-    "Attempt": ['C', 'D', 'O', {"chance": 15, "selfHeal": 50, "buff": {"BB": 20}, "turns": 1,
-                                "failText": "but nothing happened... (it only works 15% of the time)"}]
+    # 15% chance to work: heals the whole team for 25% of their max hp and gives them +20% atk for 2 turns
+    "Attempt": ['C', 'D', 'O', {"chance": 15, "heal": 25, "buff": {"BB": 20}, "turns": 2,
+                                "failText": "but the timeline was doomed..."}]
   },
   "ssr_abraize": {
-    # Can't miss, +1 Accelerated stack (+10% atk each, max 10 = +100%), all stacks are lost when using any other move
-    "Accelerated Punch": ['A', 'F', 'I', {"sureHit": True, "stacks": {"name": "Accelerated", "add": 1, "max": 10,
-                                                                      "perStack": {"BB": 10}, "resetOnOtherMove": True}}],
+    # +1 Accelerated stack (+10% atk each, max 10 = +100%) even if it misses, all stacks are lost when using any other move
+    "Accelerated Punch": ['A', 'F', 'I', {"stacks": {"name": "Accelerated", "add": 1, "max": 10,
+                                                     "perStack": {"BB": 10}, "resetOnOtherMove": True}}],
     # +5% acc, +40% atk, +15% def for the team for 1 turn and you go again straight away, 5 turn cooldown
     "Fast Forward": ['C', 'D', 'H', {"buff": {"DD": 5, "BB": 40, "CC": 15}, "turns": 1, "extraTurn": True, "cooldown": 5}],
     "Rewind": ['H', 'J', {"cooldown": 3}],                          # Team goes back to how it was last turn, 3 turn cooldown
@@ -359,8 +423,8 @@ characterAbilities = {
     # +100% eva and +10% acc to self for 1 turn, then stab 1 enemy for 10% of their max hp as true damage, 2 turn cooldown
     "Cloak and Dagger": ['A', 'D', 'F', 'H', {"buff": {"EE": 100, "DD": 10}, "turns": 1, "percentMaxHP": 10,
                                               "trueDamage": True, "cooldown": 2}],
-    # +50% evasion for the team for 3 turns, but enemies have to attack you for 1 turn, 4 turn cooldown
-    "Shroud": ['C', 'D', 'H', 'L', {"buff": {"EE": 50}, "turns": 3, "taunt": 1, "cooldown": 4}],
+    # +50% evasion for every other teammate for 3 turns, but enemies have to attack you for 1 turn, 4 turn cooldown
+    "Shroud": ['D', 'H', 'L', {"allyBuff": {"EE": 50}, "turns": 3, "taunt": 1, "cooldown": 4}],
     # Ultimate: Void Spot for 3 turns, ranged attacks miss (+50% power each), +100% power every turn, then it bursts on all enemies
     "Reality Sink": ['M', {"lingering": {"name": "Void Spot", "turns": 3, "growPerTurn": 100, "growPerRanged": 50}, "once": True}]
   },
@@ -379,20 +443,22 @@ characterAbilities = {
   "r_freeman": {
     "Slap": ['A', 'F'],                                             # Flat Damage using Attack Stat
     "Ponder": ['C', 'D', {"buff": {"EE": 3}, "turns": 1}],          # +3% evasion for the team for 1 turn
-    "SMASH!": ['A', 'D', 'F', {"buff": {"BB": 10}, "turns": 1, "recoil": 100}]  # +10% atk to self then attack, take the same damage back
+    "SMASH!": ['A', 'D', 'F', {"buff": {"BB": 100}, "turns": 1, "recoil": 100}]  # +100% atk to self then attack, take the same damage back
   },
   "sr_freeman": {
     "Pistol Whip": ['A', 'F'],                                      # Flat Damage using Attack Stat
-    # 20% chance the safety is off and it deals 10% of the enemy's current hp
-    "Shoot": ['A', 'F', 'O', {"chance": 20, "percentCurrentHP": 10, "sureHit": True, "ranged": True,
-                              "failText": "but the safety was on!"}],
+    # pick an enemy: 35% the safety is off (45 damage + 5% of its current hp), 65% it's on and he throws the gun (15 damage), 1 turn cooldown
+    "Shoot": ['F', 'H', 'O', {"cooldown": 1, "weights": [35, 65], "outcomes": [
+      ['A', 'F', {"damage": 45, "plusPercentCurrentHP": 5, "sureHit": True, "ranged": True, "outcomeText": "the safety was off"}],
+      ['A', 'F', {"damage": 15, "sureHit": True, "ranged": True, "outcomeText": "the safety was on, so he throws the gun"}]
+    ]}],
     # Nervous: 25% chance to interrupt any enemy attack on the team and Shoot the attacker back (used up once it works)
     "Hide": ['N', {"interrupt": {"name": "Nervous", "chance": 25, "guardsAllies": True, "counter": "Shoot"}}]
   },
   "r_stephen": {
     "Dropkick": ['A', 'F'],                                         # Flat Damage using Attack Stat
     # +1 Baller stack for 3 turns and enemies have to attack you for 3 turns, every hit you take removes a stack
-    "Light up": ['I', 'L', {"stacks": {"name": "Baller", "add": 1, "turns": 3, "loseStackWhenHit": True}, "taunt": 3}],
+    "Light up": ['I', 'L', {"stacks": {"name": "Baller", "add": 1, "turns": 3, "loseStackWhenHit": False}, "taunt": 3}],
     "Lock the fuck in": ['D', 'I', {"buffPerStack": {"name": "Baller", "stats": {"BB": 5}}, "turns": 1}]  # +5% atk per Baller stack for 1 turn
   },
   "sr_stephen": {
@@ -416,9 +482,9 @@ characterAbilities = {
   "sr_homestuck": {
     "Impractical Assailants": ['A', 'F', 'O', {"dice": [6, 10]}],  # Roll a die, 10 damage for every number rolled
     # +15% atk to self and -15% atk to a random teammate for 1 turn
-    "Plunder": ['D', 'E', 'O', {"buff": {"BB": 15}, "debuff": {"BB": 15}, "randomAlly": True, "turns": 1}],
+    "Plunder": ['D', 'E', 'O', {"buff": {"BB": 15}, "debuff": {"BB": 15}, "randomAlly": True, "turns": 2}],
     # -100% accuracy to all enemies and +100% accuracy for the team for 1 turn, 5 turn cooldown
-    "Thief": ['B', 'C', 'D', 'E', 'H', {"buff": {"DD": 100}, "debuff": {"DD": 100}, "turns": 1, "cooldown": 5}]
+    "Thief": ['B', 'C', 'D', 'E', 'H', {"buff": {"DD": 100}, "debuff": {"DD": 100}, "turns": 2, "cooldown": 5}]
   },
   "ssr_scottie": {
     # Low damage (50% atk) that can't miss, every 2nd hit on the same enemy gives it a Doom Mark
@@ -434,7 +500,7 @@ characterAbilities = {
   "r_homestuck": {
     "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
     # enemies have to attack you for 1 turn and you take 5% less damage this turn (+5 DEF)
-    "Spotlight Shift": ['D', 'L', {"buff": {"CC": 5}, "turns": 0, "taunt": 1}],
+    "Spotlight Shift": ['D', 'L', {"buff": {"CC": 5}, "turns": 0, "taunt": 2}],
     # the enemies skip their next turn, but every other teammate loses 10% of their max hp (it can't knock them out), 2 turn cooldown
     "Rules for thee": ['H', {"skipEnemyTurn": True, "allyCost": 10, "cooldown": 2}]
   },
@@ -443,7 +509,7 @@ characterAbilities = {
     # heal 25 hp, but the next attack misses no matter what
     "Brick Eating": [{"selfHealHP": 25, "missNextAttack": "Full of Brick"}],
     # pick a teammate: +25% to every stat for 1 turn, 2 turn cooldown
-    "Tour Alliance": ['D', 'G', 'H', {"buff": {"AA": 25, "BB": 25, "CC": 25, "DD": 25, "EE": 25}, "turns": 1, "cooldown": 2}]
+    "Tour Alliance": ['D', 'G', 'H', {"buff": {"AA": 25, "BB": 25, "CC": 25, "DD": 25, "EE": 25}, "turns": 2, "cooldown": 2}]
   },
   "r_jaiden": {
     "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
@@ -459,6 +525,13 @@ characterAbilities = {
     # pick a teammate: every attack they make on their next turn is guaranteed to hit
     "Commitment and Fuck": ['D', 'G', {"sureHitsNextTurn": "Committed"}]
   },
+  "r_freeman2": {
+    "Running Slap": ['A', 'F'],                                     # Flat Damage using Attack Stat
+    # runs away instead of attacking: +35% eva to self and +15% eva to every other teammate for this turn, 1 turn cooldown
+    "Huss": ['D', 'H', {"buff": {"EE": 35}, "allyBuff": {"EE": 15}, "turns": 2, "cooldown": 1}],
+    # 45% chance to hit 1 enemy for 45 damage and Stun it (it skips its turn), if it misses he takes 15 damage himself
+    "Charging Tackle": ['A', 'F', {"damage": 45, "accuracy": 45, "stun": 1, "missSelfDamage": 15}]
+  },
   "sr_binktop": {
     # 2 swipes at 1 enemy, 75% atk each, every swipe that lands has a 15% chance of Code Rot (-10% atk for 2 turns)
     "Viruslash": ['A', 'F', {"power": 75, "hits": 2, "hitDebuff": {"name": "Code Rot", "chance": 15, "debuff": {"BB": 10}, "turns": 2}}],
@@ -469,6 +542,32 @@ characterAbilities = {
     # enemy's max hp as damage and he is Stunned for 1 turn, 6 turn cooldown
     "Premium Subscription Malware Annihilating Slash": ['F', 'H', {"channel": {"skipTurns": 2, "damage": 265, "percentMaxHP": 7.5, "stunTurns": 1},
                                                                    "cooldown": 6}]
+  },
+  "ssr_casey": {
+    # Ranged, double damage (+100%) against an enemy with an accuracy debuff on it
+    "Music Box": ['A', 'F', {"ranged": True, "bonusVsDebuffed": {"DD": 100}}],
+    # pick another teammate: +15% acc and 33% Critical Chance (1.5x damage like Lucky Coin) for 1 of their turns, 2 turn cooldown
+    "Ballad of Fortune": ['D', 'G', 'H', {"buff": {"DD": 15}, "crit": {"name": "Critical Chance", "chance": 33, "multiplier": 1.5},
+                                          "turns": 1, "coversTheirTurn": True, "othersOnly": True, "cooldown": 2}],
+    # pick another teammate without Refrain: the next attack they use is remembered (their Melody), the next time they use
+    # that same move it does +50% damage and Refrain is used up
+    "Refrain": ['D', 'G', {"refrain": 50, "othersOnly": True}],
+    # Ultimate: from turn 5, the team's debuffs turn into buffs (Burn / Bleed heal) for as long as they had left,
+    # and the next hit everyone lands is a guaranteed critical hit (only that 1 hit, not the whole move)
+    "Grand Finale": ['C', 'D', {"reverseDebuffs": True, "crit": {"name": "Guaranteed Critical", "chance": 100, "multiplier": 1.5, "nextHit": True},
+                                "requiresRound": 5, "once": True}]
+  },
+  "ssr_steven": {
+    # Flat Damage using Attack Stat, the enemy that was hit gets +15% atk but -15% acc for 2 turns
+    "Wrathful Swipe": ['A', 'E', 'F', {"debuff": {"DD": 15}, "foeBuff": {"BB": 15}, "turns": 2}],
+    # +50% atk but -50% def to self for 2 turns, then 100% of atk to all enemies (the +50% counts for this hit already)
+    "Gussy Charge": ['A', 'B', 'D', {"buff": {"BB": 50}, "selfDebuff": {"CC": 50}, "turns": 2}],
+    # pick an enemy: 65% it attacks 1 of its allies (itself if it has none), 35% it attacks your whole team
+    "Ragebait": ['F', 'O', {"ragebait": 65}],
+    # Ultimate: from turn 4, all the damage your team's moves did last turn hits the same enemies again (only the damage),
+    # then 2 stacks of Bleed (3% of max hp, like Jack Noir's) on all enemies
+    "Reopen Old Wounds": ['B', 'M', {"repeatDamage": True, "requiresRound": 4, "once": True,
+                                     "lingering": {"name": "Bleed", "percent": 3, "turns": 1, "stackable": True, "stacks": 2}}]
   }
 }
 
@@ -501,11 +600,26 @@ enemyAbilities = {
   },
   "Garry's Mod": {
     "Hit": ['A', 'F', {"power": 50}],                               # 50% of atk to 1 party member
-    # rears up (that ends his turn), then at the start of his next turn comes crashing down for 100% of atk on 1 party member
-    "Addon-Smash!": ['A', 'F', {"windUp": "Rearing Up", "windUpText": "rears up", "releaseText": "comes crashing down"}]
+    # rears up (that ends his turn), then at the start of his next turn comes crashing down for 100% of atk on every party member
+    "Addon-Smasg!": ['A', 'B', {"windUp": "Rearing Up", "windUpText": "rears up", "releaseText": "comes crashing down"}]
   },
   "Addonshield": {
     # Taunt for enemies: the party's single target attacks on Garry's Mod hit the Addonshield instead
     "Draw Attack": ['L', {"taunt": 1}]
+  },
+  "Teniente": {
+    "Thrust": ['A', 'F'],                                           # Flat Damage using Attack Stat
+    # challenges 1 random party member: both get +15% atk and def for 1 turn, and he only attacks them for the rest of this turn
+    # (goesFirst: when he picks it, it happens before his other move this turn, and his next move is always a Thrust)
+    "Code of Honour": [{"duel": {"BB": 15, "CC": 15}, "turns": 1, "goesFirst": True, "nextMove": ["Thrust"]}],
+    # until the end of his next turn, every hit that lands on him costs the attacker 30 + 10% of their own max hp, it ends his turn
+    "Riposte": [{"riposte": 10, "riposteFlat": 30, "turns": 1, "endsTurn": True}]
+  },
+  "Conquistador": {
+    "Slash": ['A', 'B', {"power": 75}],                             # 75% of atk to every party member
+    "Stab": ['A', 'F'],                                             # Flat Damage using Attack Stat
+    # -35% def (35% more damage taken) for every party member, his next move is always a Stab or a Slash
+    "Battle Cry": ['E', 'B', {"debuff": {"CC": 35}, "turns": 1, "nextMove": ["Stab", "Slash"]}]
+    # Loot & Pillage is his passive, it is in enemyLoot
   }
 }

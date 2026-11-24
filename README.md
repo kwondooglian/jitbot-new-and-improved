@@ -84,10 +84,10 @@ Players buy items with **Grist** in **/item store**, put one in their team's ite
 | Bag of Purina Treats | 45 | On turns 5, 10, 15 and so on, each team member heals 5% of their max HP |
 | Dersite Knuckledusters | 20 | +5% ACC for every team member |
 | Protein Brick | 75 | +50% ATK for every team member, but every turn there's a 50% chance the whole team hits themselves in the head with it and skips its turn |
-| Knife Noir | Not sold | Every hit from a character's basic attack (their first move, like Punch or Dropkick) gives the enemy a stack of Bleed: 3% of its max HP at the end of the turn. Has a 10% chance to drop when you beat Jack Noir |
+| Knife Noir | Not sold | Every hit from a character's basic attack (their first move, like Punch or Dropkick) gives the enemy a stack of Bleed: 3% of its max HP at the end of the turn. An enemy can have at most 3 stacks at once. Has a 10% chance to drop when you beat Jack Noir |
 | Noah's Larpometer | 65 | +10% Grist for every battle your team wins (rounded up), but nobody's HP can be seen during battles |
 | Samsung Camera | 40 | The enemy team skips its first turn of each battle |
-| Huawei Laptop | 90 | Your whole team skips its first 3 turns of each battle, then gets +25% ATK, 25% less damage taken and +25% ACC for the rest of the battle |
+| Huawei Laptop | Not sold | Your whole team skips its first 3 turns of each battle, then gets +25% ATK, 25% less damage taken and +25% ACC for the rest of the battle. Has a 10% chance to drop when you beat Garry's Mod |
 
 How items work:
  - A player can own one of each item. Equipping doesn't use the item up, and swapping puts the old item back with their other items.
@@ -105,6 +105,8 @@ Players earn Grist by **winning** a /battle. Losing, retreating or letting the b
 | Spearman | 7 |
 | Agent | 9 |
 | Grunt | 15 |
+| Teniente | 18 |
+| Conquistador | 22 |
 | Jack Noir | 35 |
 | Garry's Mod | 50 |
 
@@ -112,6 +114,10 @@ Players can spend Grist on items, or on rolls with the **Buy a Roll** button in 
 The **Buy 10 Rolls** button gives 10 rolls for 135 Grist, also as many times as they like. To change it, edit **rollBundleAmount** and **rollBundlePrice** in utils.py and restart the bot.
 
 To change the battle amounts, edit **gristRewards** in utils.py (search for it with CTRL + F) and restart the bot. A new enemy needs a line there too, otherwise beating it gives 0 Grist and the console says so.
+
+**The Conquistador steals Grist** (Loot & Pillage): every party member that goes down while he is standing loots 10 Grist. Beating him gets all of it back on top of the reward. Losing, retreating or timing out loses it (a player can't go below 0 Grist). To change the amount or give it to another enemy, edit **enemyLoot** in utils.py.
+
+**Bosses** (Jack Noir and Garry's Mod) only pay full Grist for a player's first 5 wins against that boss. After the 5th win, that boss gives that player half (rounded up, so Jack Noir gives 18 and Garry's Mod 25) for the next 24 hours. Once the 24 hours are over, their wins against that boss count from 0 again, so they get 5 more full-Grist wins. Wins are counted per boss in **boss_wins** on each player's inventory document, and the time the half Grist ends is in **boss_half_until**. To change which enemies are bosses, the number of full-Grist wins or how long the half Grist lasts, edit **bossEnemies**, **BOSS_FULL_REWARD_WINS** and **BOSS_HALF_REWARD_HOURS** in utils.py.
 
 To give someone Grist by hand (for testing or as a reward), use MongoDB Compass:
 1. Open the **jitstuck** database, then the **inventory** collection.
@@ -165,7 +171,7 @@ To **change** an item, hover over its document in Compass, click the pencil, cha
 | `temp_stat_flat` | Like stat_flat, but only for the first few turns of each battle | the stats, plus `turns` |
 | `crit_chance` | Every hit the team lands has a chance to be a critical hit | `chance` (the %), `multiplier` (1.5 = 1.5x damage) |
 | `periodic_heal` | Every few turns, everyone on the team heals a % of their max HP | `every` (5 = turns 5, 10, 15...), `percent` |
-| `basic_attack_bleed` | Every hit from a basic attack (each character's first move) gives the enemy a stack of Bleed | `percent` (of the enemy's max HP), `turns` |
+| `basic_attack_bleed` | Every hit from a basic attack (each character's first move) gives the enemy a stack of Bleed | `percent` (of the enemy's max HP), `turns`, optional `max_stacks` |
 | `grist_bonus` | More Grist for every battle the team wins (rounded up) | `percent` |
 | `skip_enemy_turns` | The enemy team skips its first few turns of each battle | `turns` |
 | `delayed_stat_percent` | Like stat_percent, but it only starts after the first few turns and then lasts the rest of the battle | the stats, plus `turns` (3 = it starts on turn 4) |
@@ -175,6 +181,7 @@ To **change** an item, hover over its document in Compass, click the pencil, cha
  - **skip_chance** and **skip_text** (optional): a downside like the Protein Brick has. skip_chance is the % chance every turn that the whole team skips its turn, and skip_text is what the battle log says when it happens.
  - **skip_turns** (optional): a downside like the Huawei Laptop has. The whole team always skips its first that many turns of each battle, like `"skip_turns": 3`. skip_text works with it too.
  - **hide_hp** (optional): a downside like Noah's Larpometer has. With `"hide_hp": true` (Boolean in Compass) nobody's HP can be seen in the battle embed.
+ - **max_stacks** (optional, for `basic_attack_bleed`): the most stacks of Bleed one enemy can have at once, like Knife Noir's `"max_stacks": 3`. Hits on an enemy that already has that many don't add another stack. Leave it out (or use 0) for no limit.
 
 Good to know:
  - Adding or changing items needs a **restart** of the bot. You need **/syncapp** once, the first time you run this version of the bot, because /item is a new command. After a /syncapp remember to reload Discord with CTRL + R.

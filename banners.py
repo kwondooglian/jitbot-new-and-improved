@@ -96,7 +96,6 @@ add_banner(
         "sr_homestuck",
         "sr_abraize",
         "sr_trey",
-        "sr_binktop",
         # R
         "r_abraize",
         "r_abraize2",
@@ -107,29 +106,30 @@ add_banner(
         "r_homestuck",
         "r_max",
         "r_jaiden",
+        "r_freeman2",
     ],
 )
 
 
 # ----- Special banner (a fully filled in example: a web link picture, a color and a featured character) -----
 add_banner(
-    name = "Special Banner",
+   name = "Special Banner",
     description = "The special banner for special characters, limited time only!",
-    image = "https://media.discordapp.net/attachments/1426812344549380136/1441591428042985492/SSR_SCOTTIE.gif?ex=69551be3&is=6953ca63&hm=9a1141a0f327f2f16ed80b996243679e62491b0fa2b985babdc1bc09d82cccaa&=&width=813&height=524",
+    image = "https://media.discordapp.net/attachments/907662210619289600/1456530651359477802/SSR_STEVEN.gif?ex=6b05d3a0&is=6b048220&hm=c05968344a8a9cbdfc855ca9a40649c08874a22e4f83a9f870b1e740b9bf1959",
     color = "#3f48cc",
     ssr_rate = 1,
     sr_rate = 29,
     r_rate = 70,
-    featured = ["ssr_scottie"],
+    featured = ["ssr_steven"],
     contents = [
         # SSR
-        "ssr_scottie",
+        "ssr_steven",
+        "ssr_casey",
         # SR
         "sr_freeman",
         "sr_stephen",
         "sr_homestuck",
         "sr_abraize",
-        "sr_trey",
         # R
         "r_abraize",
         "r_abraize2",
@@ -140,12 +140,13 @@ add_banner(
         "r_homestuck",
         "r_max",
         "r_jaiden",
+        "r_freeman2",
     ],
 )
 
 add_banner(
     name = "Bullshit Banner",
-    description = "The everyday banner. All of the regular R, SR and SSR characters can be pulled here.",
+    description = "Limited time only, forgotten Huawei laptop found in a closet. Hopefully it still works.",
     image = "https://cdn.discordapp.com/attachments/907662210619289600/1573813352096989287/SR_BINKTOP.gif?ex=6b035f67&is=6b020de7&hm=4a67c5ce7dd236e655fecd00395fac6965e21b6c082a1a8f7a71d4029e412791&",
     color = "#caff09",
     ssr_rate = 0,
@@ -163,5 +164,6 @@ add_banner(
         "r_homestuck",
         "r_max",
         "r_jaiden",
+        "r_freeman2",
     ],
 )
