@@ -55,7 +55,8 @@ backgrounds = {
     "purple1": "./graphics/battle/purple1.png",
     "purple2": "./graphics/battle/purple2.png",
     "garrysmod": "./graphics/battle/garrysmodbackground.png",
-    "dersiteroyalty": "./graphics/battle/dersiteroyaltybackground.png"
+    "dersiteroyalty": "./graphics/battle/dersiteroyaltybackground.png",
+    "barrier": "./graphics/battle/barrier.png"
 }
 # /battle uses purple2, unless the enemy has its own background here
 DEFAULT_BACKGROUND = "purple2"
@@ -63,6 +64,11 @@ enemyBackgrounds = {
     "Garry's Mod": "garrysmod",
     "Teniente": "dersiteroyalty",
     "Conquistador": "dersiteroyalty",
+    "John": "barrier",
+    "Rose": "barrier",
+    "Dave": "barrier",
+    "Jade": "barrier",
+    "Heroes of Legend": "barrier",
 }
 
 characterImages ={
@@ -100,7 +106,14 @@ enemyImages = {
     "Garry's Mod": "./graphics/battle/gmod.png",
     "Addonshield": "./graphics/battle/addonshield.png",
     "Teniente": "./graphics/battle/teniente.png",
-    "Conquistador": "./graphics/battle/conquistador.png"
+    "Conquistador": "./graphics/battle/conquistador.png",
+    "Draconian Dignitary": "./graphics/battle/draconianDignitary.png",
+    "Courtyard Droll": "./graphics/battle/droll.png",
+    "Hegemonic Brute": "./graphics/battle/hegemonic.png",
+    "John": "./graphics/battle/john.png",
+    "Rose": "./graphics/battle/rose.png",
+    "Dave": "./graphics/battle/dave.png",
+    "Jade": "./graphics/battle/jade.png"
 }
 
 # Character Banner GIFs
@@ -151,7 +164,14 @@ enemySpots = {
     "Jack Noir": (0, 150),
     "Garry's Mod": (0, 37),
     "Teniente": (0, 59),       # his picture is 360 tall, this puts his feet on the bottom like the others
-    "Conquistador": (0, 0)
+    "Conquistador": (0, 0),
+    "Draconian Dignitary": (0, 86),
+    "Courtyard Droll": (25, 270),
+    "Hegemonic Brute": (0, 0),  # his picture is as big as the whole battle screen
+    "John": (0, 221),
+    "Rose": (0, 212),
+    "Dave": (20, 115),
+    "Jade": (30, 125)
 }
 
 # Enemies that get summoned during a battle (Garry's Mod's Addonshields) are drawn onto the battle screen when they show up:
@@ -179,13 +199,63 @@ enemyAttributes = {
     "Garry's Mod": [650, 70, 65, 2, 0, 85, "Hit, Deal 50% of atk to a targeted enemy", "Addon-Smash!, Rear up for 1 turn then come crashing down on all enemies for full atk", "Passive: Every 161 damage taken, summon an Addonshield in front of himself"],
     "Addonshield": [100, 0, 15, 1, 0, 0, "Draw Attack, The player team's attacks on Garry's Mod hit the Addonshield instead"],
     "Teniente": [450, 40, 20, 2, 2, 95, "Thrust, Basic attack", "Code of Honour, +15% atk and def for himself and 1 party member, then he Thrusts at them (he only attacks them this turn)", "Riposte, Until the end of his next turn every hit on him costs the attacker 30 + 10% of their max hp, ends his turn"],
-    "Conquistador": [600, 60, 60, 2, 0, 85, "Slash, Attack all party members with 25% less power", "Stab, Attack 1 party member", "Battle Cry, -35% def for every party member for 1 turn, his next move is a Stab or a Slash", "Passive: Loot & Pillage, Every party member that goes down while he is standing steals 10 Grist, beating him gets it all back"]
+    "Conquistador": [600, 60, 60, 2, 0, 85, "Slash, Attack all party members with 25% less power", "Stab, Attack 1 party member", "Battle Cry, -35% def for every party member for 1 turn, his next move is a Stab or a Slash", "Passive: Loot & Pillage, Every party member that goes down while he is standing steals 10 Grist, beating him gets it all back"],
+    "Draconian Dignitary": [1000, 35, 40, 3, 4, 95, "Cue Whack, Deal 50% more damage and stun the party member who was hit for 1 turn", "Careful Planning, Always goes first, his next move is guaranteed to hit and deals 75% more damage", "Cue Swipe, Attack all party members"],
+    "Courtyard Droll": [550, 30, 15, 3, 35, 80, "Bull Penis Cane, 3 swipes at 1 party member: the 1st always hits, the 2nd has a 75% chance and the 3rd 50%", "Scamper, -20% acc for every party member for 2 turns", "Passive: Hidden C4, Once he drops below half HP it blows up: everyone on the battlefield takes 25% of their max HP, including himself"],
+    "Hegemonic Brute": [1750, 55, 70, 2, 0, 75, "Smash, Rear up for 1 turn then smash all party members for full atk", "Unforeseen Bite, Bite 1 party member for 40 damage + 10% of their max HP and apply 2 stacks of bleed (-3% hp each, not if they already have 2)", "Trusty Axe, Attack all party members for 50% of atk"],
+    "John": [425, 40, 35, 2, 75, 50, "Scarf Swipe, Basic attack", "Pop-O-Matic Vrillyhoo Hammer, 50 damage to 1 party member + 1 of 8 random effects: nothing / 2 stacks of bleed / -15% atk / -15% def / -15% eva / -15% acc / stun / heal himself for the damage done", "Windy Thing, Every 4 turns: 15% of max HP damage and -30% acc for 3 turns to all party members"],
+    "Rose": [375, 25, 35, 2, 10, 100, "Needlewand, Ranged basic attack", "Quill of Echidna, Ranged attack for 40 true damage, ignores the HP that comes from def", "Passive: Premonition, Every 6 turns the party can't choose their moves, everyone uses their basic attack", "Passive: Foresight, Her attacks always land and she can't get acc debuffs"],
+    "Dave": [500, 50, 50, 2, 5, 90, "1/2Sword Swipe, Attack all party members and apply 1 stack of freeze for 2 turns (3 stacks = frozen, they skip their next turn)", "Record Scratch, +25% atk and def for himself and all his allies until the end of the next turn, and all their attacks land", "Passive: Rewind, If an ally takes more than 150 damage in 1 turn, he clears all debuffs and heals himself and all his allies for that much right away", "Passive: His allies can't die from Burn / Bleed while he is standing, he rewinds them to 150 HP instead"],
+    "Jade": [400, 35, 40, 2, 8, 90, "Distort, Attack all party members for 50% of atk", "Sucker Punch, 15 damage to 1 party member, can't miss and stuns them for 1 turn", "Radioactive Spatial Rift, 3 stacks of bleed (-3% hp each) for all party members", "Spatial Shuffle, Every 3 turns: puts the party in a random order"]
+}
+
+# Enemies that blow up the first time they drop below "belowHP" % of their max hp (the Courtyard Droll's Hidden C4): everyone on
+# the battlefield takes "percentMaxHP" % of their own max hp, the enemy too (right after the move that did it, it can't be dodged)
+enemyBlasts = {
+    "Courtyard Droll": {"name": "Hidden C4", "belowHP": 50, "percentMaxHP": 25},
+}
+
+# Enemies that can see the future (Rose's Foresight): all their attacks land (Reality Sink, Interfere... still stop them) and
+# accuracy debuffs don't work on them
+enemyForesight = ["Rose"]
+# Enemies with premonitions (Rose): every that many turns (6, 12, 18...) the players can't choose, everyone uses their basic attack
+enemyPremonitions = {
+    "Rose": 6,
+}
+
+# Enemies that Rewind (Dave): if one of their allies takes more than that much damage in 1 turn, all debuffs (and Burn / Bleed) on the
+# enemy team are cleared and everyone on it heals that damage, right after the move that did it and as many times as it happens
+enemyRewinds = {
+    "Dave": 150,
+}
+# Enemies that don't let their allies die from chip damage (Dave): while they are standing, an ally that would go down to Burn / Bleed
+# gets rewound instead, it goes on with that much hp and without its debuffs, as many times as it happens
+enemyChipRewinds = {
+    "Dave": 150,
 }
 
 # Enemies that steal Grist (the Conquistador's Loot & Pillage): every party member that goes down while this enemy is standing
 # takes that much Grist from the player. Beating the battle gets all of it back, losing / retreating / timing out loses it
 enemyLoot = {
     "Conquistador": 10,
+}
+
+# Fights against several different enemies at once, picked in /battle by this name (it needs a category and a Grist reward like an enemy)
+# "enemies" = who is in it, in their turn order
+# "spots" = where they stand (the top left corner of their picture), in the order they get drawn (the last one is in front of the others)
+enemyGroups = {
+    "Heroes of Legend": {
+        "enemies": ["Dave", "Rose", "Jade", "John"],
+        "spots": {"Dave": (14, 83), "Rose": (0, 212), "Jade": (106, 102), "John": (58, 221)},
+    },
+}
+
+# The /battle categories and the enemies in each one, in the order the menus show them
+# (a new enemy has to be added to one of these, otherwise nobody can fight it. John, Rose, Dave and Jade are only in Heroes of Legend)
+battleCategories = {
+    "Dersites": ["Ruffian", "Grunt", "Spearman", "Agent", "Teniente", "Conquistador"],
+    "Bosses": ["Jack Noir", "Draconian Dignitary", "Courtyard Droll", "Hegemonic Brute", "Heroes of Legend"],
+    "Event Characters": ["Garry's Mod"],
 }
 
 # Grist the player gets for WINNING a /battle (losing, retreating or timing out gives nothing)
@@ -197,7 +267,11 @@ gristRewards = {
     "Spearman": 7,
     "Agent": 9,
     "Grunt": 15,
-    "Jack Noir": 35,
+    "Jack Noir": 40,
+    "Draconian Dignitary": 50,
+    "Courtyard Droll": 30,
+    "Hegemonic Brute": 35,
+    "Heroes of Legend": 0,
     "Garry's Mod": 50,
     "Teniente": 18,
     "Conquistador": 22,
@@ -206,7 +280,7 @@ gristRewards = {
 # for BOSS_HALF_REWARD_HOURS hours, after that their wins against it count from 0 again
 # (every player's wins are counted per boss, in "boss_wins" on their inventory document in MongoDB,
 #  and when their half Grist ends in "boss_half_until")
-bossEnemies = ["Jack Noir", "Garry's Mod"]
+bossEnemies = ["Jack Noir", "Draconian Dignitary", "Courtyard Droll", "Hegemonic Brute", "Garry's Mod"]
 BOSS_FULL_REWARD_WINS = 5
 BOSS_HALF_REWARD_HOURS = 24
 
@@ -269,21 +343,30 @@ characterAttributes = {
 #            Hits 1 enemy (all of them with Option B) and rolls accuracy vs evasion
 #            numbers: "power" = % of attack used (default 100), "damage" = flat damage instead of the attack stat,
 #                     "percentMaxHP" / "percentCurrentHP" = damage is a % of the target's hp, "trueDamage" = ignores defense buffs,
+#                     "trueHP" = that much damage to their hp without the battle hp from defense: the more of their battle hp comes
+#                                from defense the more it does, and attack buffs don't change it (Rose's Quill of Echidna),
 #                     "plusPercentCurrentHP" = that % of the target's current hp gets added on top (SR Freeman's Shoot),
+#                     "plusPercentMaxHP" = the same with their max hp (the Hegemonic Brute's Unforeseen Bite),
 #                     "stun" = a hit that lands Stuns the target for that many turns (it skips its turns, R Freeman2's Charging Tackle),
+#                     "freeze": {"turns", "frozenAt"} = a hit that lands gives a stack of Freeze for that many turns, at "frozenAt" stacks they
+#                                are used up and the target is Frozen (it skips its next turn, Dave's 1/2Sword Swipe),
 #                     "missSelfDamage" = if the attack misses (or is evaded) the user takes that much damage (it can't knock them out),
 #                     "sureHit" = can't miss or be evaded, "recoil" = % of the damage dealt that the user takes too,
+#                     "lifesteal" = % of the damage dealt that the user heals (John's Pop-O-Matic Vrillyhoo Hammer),
 #                     "hits" = how many times each target gets hit (each hit rolls to hit on its own, SR Binktop's Viruslash),
+#                     "eachHit": [{...}, {...}] = with "hits", the "sureHit" / "accuracy" of the 1st hit, the 2nd... (Bull Penis Cane),
 #                     "hitDebuff": {"name", "chance", "debuff", "turns"} = every hit that lands has a chance to debuff the target (Code Rot),
 #                     "bonusVsDebuffed": {stat: %} = that much more damage if the target has a debuff on that stat (SSR Casey's Music Box),
 #                     "foeBuff": {stat: %} = the target that was hit gets that buff for "turns" (SSR Steven's Wrathful Swipe)
 # Option B = Area of Effect at Enemies
 # Option C = Area of Effect at Teammates
 # Option D = Buff: the whole team with Option C, one picked teammate with Option G, otherwise yourself
-#            numbers: "buff": {stat: %}, "turns", "heal" = % of max hp healed, "debuffImmune" = can't be debuffed while it lasts,
+#            numbers: "buff": {stat: %}, "turns", "heal" = % of max hp healed, "healHP" = flat hp healed, "debuffImmune" = can't be debuffed while it lasts,
 #                     "damageImmune" = can't take any damage while it lasts (hits, Burn, Bleed), paying your own hp still works,
 #                     "sureHitsNextTurn": "status name" = every attack they make on their next turn hits (R Jaiden's Commitment),
 #                                         a move's own chances ("accuracy", Option O "chance" / "outcomes") are still rolled,
+#                                         "sureHitsDamage" = that move does that % more damage too (the Draconian Dignitary's Careful Planning),
+#                     "sureHitsForTurns": "status name" = the same, but for every attack during "turns" (Dave's Record Scratch),
 #                     "allyBuff": {stat: %} = a different buff for every other teammate at the same time (R Freeman2's Huss, SSR Trey's Shroud),
 #                     "crit": {"name", "chance", "multiplier", "nextHit"} = a status that adds to the chance of a critical hit (it works
 #                             like Lucky Coin and adds on top of it), "nextHit" = it lasts until their next hit that lands instead of "turns",
@@ -337,7 +420,8 @@ characterAttributes = {
 #   "once" = can only be used once per battle (ultimates)
 #   "requiresRound" = can only be used from that turn on (Nihilism, Grand Finale, Reopen Old Wounds)
 #   "selfDebuff": {stat: %} = a debuff on the user for "turns", whatever the move does to the enemies (SSR Steven's Gussy Charge)
-#   "ragebait": % = the chance the Option F enemy attacks 1 of its allies (itself if it has none), otherwise it attacks your whole team
+#   "hurtToAttack" = once "turns" are over, the % of max hp the user lost to damage in them becomes an attack buff on the user for
+#            "hurtToAttack" turns (SSR Steven's Ragebait)
 #   "repeatDamage" = the damage your team's moves did last turn hits the same enemies again (SSR Steven's Reopen Old Wounds)
 #   "extraTurn" = the user goes again straight away
 #   "selfDamage" = flat hp the user pays, "selfHeal" = % of max hp the user heals, "selfHealHP" = flat hp the user heals
@@ -361,6 +445,9 @@ characterAttributes = {
 #            "riposteFlat" = that much damage on top of it
 #   "goesFirst" = enemies only: when the enemy picks this move it happens before its other moves that turn (the Teniente's Code of Honour)
 #   "endsTurn" = enemies only: using the move ends the enemy's turn, its other moves that turn don't happen (the Teniente's Riposte)
+#   "shuffleTeam" = enemies only: the party's turn order gets randomized (Jade's Spatial Shuffle)
+#   "useWhenReady" = enemies only: never picked at random, it is the enemy's first move on every turn it can be used (John's Windy Thing)
+#   "debuffSource": "name" = the Option E debuff counts as coming from that instead of the move (so different ones from 1 move add up)
 #   "nextMove": [move names] = enemies only: the enemy's next move is one of these (picked at random), even when it is
 #            next turn (Code of Honour -> Thrust, the Conquistador's Battle Cry -> Stab or Slash)
 
@@ -404,8 +491,8 @@ characterAbilities = {
     # +5% acc, +40% atk, +15% def for the team for 1 turn and you go again straight away, 5 turn cooldown
     "Fast Forward": ['C', 'D', 'H', {"buff": {"DD": 5, "BB": 40, "CC": 15}, "turns": 1, "extraTurn": True, "cooldown": 5}],
     "Rewind": ['H', 'J', {"cooldown": 3}],                          # Team goes back to how it was last turn, 3 turn cooldown
-    # Ultimate: the team can't be debuffed, +50% atk for 5 turns and everyone is healed to full, once per battle
-    "Universal Stabilizer": ['C', 'D', {"buff": {"BB": 50}, "turns": 5, "debuffImmune": True, "heal": 100, "once": True}]
+    # Ultimate: the team can't be debuffed, +50% atk for 5 turns and everyone heals 250 hp, once per battle
+    "Universal Stabilizer": ['C', 'D', {"buff": {"BB": 50}, "turns": 5, "debuffImmune": True, "healHP": 250, "once": True}]
   },
   "r_trey": {
     "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
@@ -494,8 +581,8 @@ characterAbilities = {
     # Enemies have to attack you and you take 30% less damage for 2 turns, every hit you take gives the attacker a Doom Mark
     # If you get knocked out during it, every Doom Mark explodes for 150% of your atk, 2 turn cooldown
     "Martyrdom": ['D', 'H', 'L', 'P', {"buff": {"CC": 30}, "turns": 2, "taunt": 2, "doom": "martyrdom", "explodePower": 150, "cooldown": 2}],
-    # Ultimate: from turn 4 with 5+ Doom Marks out, for 3 turns every enemy hurts itself, hits an ally or lies still each turn
-    "Nihilism": ['B', 'P', {"doom": "nihilism", "requiresRound": 4, "requiresMarks": 5, "turns": 3, "once": True}]
+    # Ultimate: from turn 4 with 5+ Doom Marks out, for 3 turns the picked enemy hurts itself, hits an ally or lies still each turn
+    "Nihilism": ['F', 'P', {"doom": "nihilism", "requiresRound": 4, "requiresMarks": 5, "turns": 3, "once": True}]
   },
   "r_homestuck": {
     "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
@@ -562,8 +649,8 @@ characterAbilities = {
     "Wrathful Swipe": ['A', 'E', 'F', {"debuff": {"DD": 15}, "foeBuff": {"BB": 15}, "turns": 2}],
     # +50% atk but -50% def to self for 2 turns, then 100% of atk to all enemies (the +50% counts for this hit already)
     "Gussy Charge": ['A', 'B', 'D', {"buff": {"BB": 50}, "selfDebuff": {"CC": 50}, "turns": 2}],
-    # pick an enemy: 65% it attacks 1 of its allies (itself if it has none), 35% it attacks your whole team
-    "Ragebait": ['F', 'O', {"ragebait": 65}],
+    # draws all attacks to himself with -75% def for 1 turn, then the % of his max hp he lost becomes an atk buff for 2 turns, 3 turn cooldown
+    "Ragebait": ['H', 'L', {"taunt": 1, "selfDebuff": {"CC": 75}, "turns": 1, "hurtToAttack": 2, "cooldown": 3}],
     # Ultimate: from turn 4, all the damage your team's moves did last turn hits the same enemies again (only the damage),
     # then 2 stacks of Bleed (3% of max hp, like Jack Noir's) on all enemies
     "Reopen Old Wounds": ['B', 'M', {"repeatDamage": True, "requiresRound": 4, "once": True,
@@ -621,5 +708,63 @@ enemyAbilities = {
     # -35% def (35% more damage taken) for every party member, his next move is always a Stab or a Slash
     "Battle Cry": ['E', 'B', {"debuff": {"CC": 35}, "turns": 1, "nextMove": ["Stab", "Slash"]}]
     # Loot & Pillage is his passive, it is in enemyLoot
+  },
+  "Draconian Dignitary": {
+    "Cue Whack": ['A', 'F', {"power": 150, "stun": 1}],             # 150% of atk, whoever gets hit is Stunned for their next turn
+    # his next move can't miss and does 75% more damage (goesFirst: it happens before his other moves, and his next move is always an attack)
+    "Careful Planning": ['D', {"sureHitsNextTurn": "Careful Planning", "sureHitsDamage": 75, "goesFirst": True, "nextMove": ["Cue Whack", "Cue Swipe"]}],
+    "Cue Swipe": ['A', 'B']                                         # 100% of atk to every party member
+  },
+  "Courtyard Droll": {
+    # 3 swipes of 100% of atk at 1 party member: the 1st always hits, the 2nd has 75% accuracy and the 3rd 50%
+    "Bull Penis Cane": ['A', 'F', {"hits": 3, "eachHit": [{"sureHit": True}, {"accuracy": 75}, {"accuracy": 50}]}],
+    "Scamper": ['E', 'B', {"debuff": {"DD": 20}, "turns": 2}]       # -20% acc for every party member for 2 turns
+    # Hidden C4 is his passive, it is in enemyBlasts
+  },
+  "Hegemonic Brute": {
+    # the same move as Garry's Mod's Addon-Smasg!: rears up (that ends his turn), then 100% of atk on every party member next turn
+    "Smash": ['A', 'B', {"windUp": "Rearing Up", "windUpText": "rears up", "releaseText": "smashes the ground"}],
+    # 40 damage + 10% of their max hp to 1 party member and 2 stacks of Bleed (3% of max hp each, like Jack Noir's), 2 stacks at most
+    "Unforeseen Bite": ['A', 'F', 'M', {"damage": 40, "plusPercentMaxHP": 10,
+                                        "lingering": {"name": "Bleed", "percent": 3, "turns": 1, "stackable": True, "stacks": 2, "maxStacks": 2}}],
+    "Trusty Axe": ['A', 'B', {"power": 50}]                         # 50% of atk to every party member
+  },
+  "John": {  # can only be fought in Heroes of Legend (enemyGroups)
+    "Scarf Swipe": ['A', 'F'],                                      # Flat Damage using Attack Stat
+    # 50 damage to 1 party member + 1 of 8 random effects on whoever got hit (all equally likely)
+    "Pop-O-Matic Vrillyhoo Hammer": ['O', {"outcomes": [
+      ['A', 'F', {"damage": 50, "outcomeText": "rolled a 1 (no effect)"}],
+      ['A', 'F', 'M', {"damage": 50, "lingering": {"name": "Bleed", "percent": 5, "turns": 2, "stackable": True, "stacks": 2}, "outcomeText": "rolled a 2"}],
+      ['A', 'E', 'F', {"damage": 50, "debuff": {"BB": 45}, "turns": 2, "debuffSource": "Hammer ATK", "outcomeText": "rolled a 3"}],
+      ['A', 'E', 'F', {"damage": 50, "debuff": {"CC": 45}, "turns": 2, "debuffSource": "Hammer DEF", "outcomeText": "rolled a 4"}],
+      ['A', 'E', 'F', {"damage": 50, "debuff": {"EE": 45}, "turns": 2, "debuffSource": "Hammer EVA", "outcomeText": "rolled a 5"}],
+      ['A', 'E', 'F', {"damage": 50, "debuff": {"DD": 45}, "turns": 2, "debuffSource": "Hammer ACC", "outcomeText": "rolled a 6"}],
+      ['A', 'F', {"damage": 50, "stun": 1, "outcomeText": "rolled a 7"}],
+      ['A', 'F', {"damage": 50, "lifesteal": 100, "outcomeText": "rolled an 8"}]
+    ]}],
+    # Ultimate: used on turn 4, 8, 12... can't miss, 15% of max hp to every party member and -30% acc for 3 turns
+    "Windy Thing": ['A', 'B', 'E', 'H', {"percentMaxHP": 45, "sureHit": True, "debuff": {"DD": 30}, "turns": 3,
+                                         "useWhenReady": True, "requiresRound": 4, "cooldown": 3}]
+  },
+  "Rose": {  # can only be fought in Heroes of Legend (enemyGroups)
+    "Needlewand": ['A', 'F', {"ranged": True}],                     # Flat Damage using Attack Stat, ranged
+    # 40 true damage, ranged: the battle hp that comes from defense and defense buffs don't help against it
+    "Quill of Echidna": ['A', 'F', {"trueHP": 70, "trueDamage": True, "ranged": True}]
+    # her premonition and Foresight are in enemyPremonitions and enemyForesight
+  },
+  "Dave": {  # can only be fought in Heroes of Legend (enemyGroups)
+    # 100% of atk to every party member and 1 stack of Freeze for 2 turns, at 3 stacks they are Frozen (they skip their next turn)
+    "1/2Sword Swipe": ['A', 'B', {"freeze": {"turns": 2, "frozenAt": 2}}],
+    # +25% atk and def for the enemy team until the end of the next turn, and all their attacks land
+    "Record Scratch": ['C', 'D', {"buff": {"BB": 25, "CC": 25}, "turns": 1, "sureHitsForTurns": "Sees the Future"}]
+    # his Rewind is in enemyRewinds, saving his allies from Burn / Bleed is in enemyChipRewinds
+  },
+  "Jade": {  # can only be fought in Heroes of Legend (enemyGroups)
+    "Distort": ['A', 'B'],                           # 50% of atk to every party member (the same as SSR Jayden's)
+    "Sucker Punch": ['A', 'F', {"damage": 15, "sureHit": True, "stun": 1}],  # 15 damage to 1 party member, can't miss and Stuns them
+    # 3 stacks of Bleed (3% of max hp each, like Jack Noir's) for every party member, it doesn't have to hit
+    "Radioactive Spatial Rift": ['B', 'M', {"lingering": {"name": "Bleed", "percent": 3, "turns": 1, "stackable": True, "stacks": 3}}],
+    # Ultimate: used on turn 3, 6, 9... the party goes in a new random order
+    "Spatial Shuffle": ['H', {"shuffleTeam": True, "useWhenReady": True, "requiresRound": 3, "cooldown": 2}]
   }
 }

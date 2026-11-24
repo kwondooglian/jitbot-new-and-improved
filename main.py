@@ -203,7 +203,7 @@ def ssr_abraizeEmbed():
     embed.add_field(name=characterAttributes["ssr_abraize"][5], value="Accelerate yourself to punch the opponent. Applies one stack of 'Accelerated' state to self. Gain +10% atk for every consecutive 'Accelerated' state with a maximum of +100% atk. All 'Accelerated' stacks are removed when using another move.", inline=False)
     embed.add_field(name=characterAttributes["ssr_abraize"][6], value="Apply a +5% acc bonus, +40% atk bonus, and +15% def bonus to all allies for one turn and allows you to immediately take another turn. Cannot be used for another 5 turns.", inline=False)
     embed.add_field(name=characterAttributes["ssr_abraize"][7], value="Revert all party member's stats to the state they were in during the prior turn. Cannot be used for another 3 turns.", inline=False)
-    embed.add_field(name=characterAttributes["ssr_abraize"][8], value="Your status as an anchor of time and your experience lends you well to combat. Turn back the wheels of time to make everything right again. Applies debuff nullification (cannot be debuffed) and a +50% atk bonus to all allies for 5 turns. Heals all allies to full. Cannot be used again.", inline=False)
+    embed.add_field(name=characterAttributes["ssr_abraize"][8], value="Your status as an anchor of time and your experience lends you well to combat. Turn back the wheels of time to make everything right again. Applies debuff nullification (cannot be debuffed) and a +50% atk bonus to all allies for 5 turns. Heals all allies for 250 HP. Cannot be used again.", inline=False)
     return embed
 
 def r_treyEmbed():
@@ -312,7 +312,7 @@ def ssr_stevenEmbed():
     embed.add_field(name="ACC:", value=characterAttributes["ssr_steven"][4], inline=True)
     embed.add_field(name=characterAttributes["ssr_steven"][5], value="Swipe at an enemy in a fit of wrath. The enemy that was hit gains a +15% atk buff, but also a -15% acc debuff, for 2 turns.", inline=False)
     embed.add_field(name=characterAttributes["ssr_steven"][6], value="Apply a -50% def debuff and a +50% atk buff to self for 2 turns, then charge forward and crash through the enemies, dealing your atk as damage to all enemies.", inline=False)
-    embed.add_field(name=characterAttributes["ssr_steven"][7], value="Choose an enemy. 65% chance that it gets extremely angry at your stupid bullshit and attacks its ally (or hurts itself if it has no ally). 35% chance that it rages against your team, attacking everyone.", inline=False)
+    embed.add_field(name=characterAttributes["ssr_steven"][7], value="Enrage the enemies with your stupid bullshit, drawing all attacks to yourself with a -75% def debuff for 1 turn. The % of your max HP you lost is then converted into an atk buff for yourself for 2 turns. Cannot be used for another 3 turns.", inline=False)
     embed.add_field(name=characterAttributes["ssr_steven"][8], value="Only usable after a minimum of 3 turns. All damage dealt by your team's moves during the last turn are reopened onto the same enemies (status effects are not repeated), and 2 stacks of bleed are applied to every enemy. Cannot be used again.", inline=False)
     return embed
 
@@ -462,7 +462,7 @@ def ssr_scottieEmbed():
     embed.add_field(name=characterAttributes["ssr_scottie"][5], value="Unique Property is that the attack is unaffected by accuracy debuffs and is guaranteed to connect, Low Damage and If used twice applies a doom mark", inline=False)
     embed.add_field(name=characterAttributes["ssr_scottie"][6], value="Debuff targets all enemies by reducing accuracy and damage on all enemies for 3 turns. Accuracy and damage reduction scale for the amount of doom marks an enemy has. All doom marks are consumed and removed upon use", inline=False)
     embed.add_field(name=characterAttributes["ssr_scottie"][7], value="Redirects enemies to attack Scottie for 2 turns Damage reduction 30% Each successfull attack landed on Scottie inflicts 1 doom mark to the assailant (If an enemy does a single strong hit only one mark will apply, but if an enemy does a barrage; the amount of marks will follow accordingly) 1x12=1 mark 3x4=3 marks If Scottie is to die during martyrdom the doom marks that were already applied will explode dealing major damage to enemies. Cannot be used for another 2 turns.", inline=False)
-    embed.add_field(name=characterAttributes["ssr_scottie"][8], value="Only usable after a minimum of 3 turns and if the total amount of doom makes on the field is 5 For 3 turns every enemy on the field will lose all sense of will and reason Causing a chance event for each turn applied 33% chance for an enemy to harm itself 33% chance for an enemy to attack on of its allies 33% chance for an enemy to lay motionless allowing all attack done to them be guaranteed to land", inline=False)
+    embed.add_field(name=characterAttributes["ssr_scottie"][8], value="Only usable after a minimum of 3 turns and if the total amount of doom makes on the field is 5 Choose an enemy. For 3 turns that enemy will lose all sense of will and reason Causing a chance event for each turn applied 33% chance for an enemy to harm itself 33% chance for an enemy to attack on of its allies 33% chance for an enemy to lay motionless allowing all attack done to them be guaranteed to land", inline=False)
     return embed
 
 def sssr_maxEmbed():
@@ -1776,16 +1776,19 @@ class BattleView(discord.ui.View):
 
     def update_scene(self):
         """Draws the battle picture again when summoned enemies (Garry's Mod's Addonshields) showed up or went away,
-        or anyone was defeated (their sprite goes) or a team member got back above 0 HP (Rewind brings it back).
+        or anyone was defeated (their sprite goes) or a team member got back above 0 HP (Rewind brings it back),
+        or the team's order changed (Jade's Spatial Shuffle).
         Returns the picture's path, or None when nothing changed."""
         if not self.scene or not battleExists(self.user_id):
             return None
         summary = getBattleSummary(self.user_id)
         knocked_out = [row["unit"] for row in summary["players"] + summary["enemies"] if not row["alive"]]
         drawn = (summary["summoned"], knocked_out)
-        if drawn == self.drawn_scene:
+        team = [row["unit"] for row in summary["players"]]
+        if drawn == self.drawn_scene and team == self.scene[2]:
             return None
         self.drawn_scene = drawn
+        self.scene = (*self.scene[:2], team)
         return draw_battle_screen(self.user_id, *self.scene, *drawn)
 
     def redraw_scene(self):
@@ -1880,19 +1883,32 @@ class BattleView(discord.ui.View):
             pass
 
 
+async def enemy_autocomplete(interaction: discord.Interaction, current: str):
+    """The enemies in the category already picked in /battle (all of them if none is picked yet)."""
+    category = interaction.namespace.categories
+    typed = current.strip().lower().replace("’", "'")  # phones type ’
+    return [
+        app_commands.Choice(name=enemy, value=enemy)
+        for name, enemies in battleCategories.items() if category == name or category not in battleCategories
+        for enemy in enemies if typed in enemy.lower()
+    ][:25]
+
+
 @bot.tree.command(name = "battle")
-@app_commands.choices(enemies=[
-    app_commands.Choice(name="Ruffian", value="Ruffian"),
-    app_commands.Choice(name="Agent", value="Agent"),
-    app_commands.Choice(name="Spearman", value="Spearman"),
-    app_commands.Choice(name="Grunt", value="Grunt"),
-    app_commands.Choice(name="Teniente", value="Teniente"),
-    app_commands.Choice(name="Conquistador", value="Conquistador"),
-    app_commands.Choice(name="Jack Noir", value="Jack Noir"),
-    app_commands.Choice(name="Garry's Mod", value="Garry's Mod"),
-])
-async def battle(interaction: discord.Interaction,enemies:app_commands.Choice[str]):
+@app_commands.describe(categories="Which kind of enemy to fight", enemy="Which enemy to fight")
+@app_commands.choices(categories=[app_commands.Choice(name=name, value=name) for name in battleCategories])
+@app_commands.autocomplete(enemy=enemy_autocomplete)
+async def battle(interaction: discord.Interaction, categories: app_commands.Choice[str], enemy: str):
     """Battle an Enemy"""
+    # the enemy has to be in the picked category (the menu gives its exact name, typing it out works too)
+    typed, enemies = enemy.strip(), battleCategories[categories.value]
+    enemy = next((name for name in enemies if name.lower() == typed.lower().replace("’", "'")), None)
+    if enemy is None:
+        typed = discord.utils.escape_mentions(discord.utils.escape_markdown(typed[:100]))
+        names = ", ".join(f"**{name}**" for name in enemies)
+        await interaction.response.send_message(f"There is no **{typed}** in **{categories.name}**. Pick one of these: {names}", ephemeral=True)
+        return
+
     # Get user's team
     user_data = inventory_collection.find_one({"user_id": interaction.user.id})
     if not user_data:
@@ -1921,7 +1937,7 @@ async def battle(interaction: discord.Interaction,enemies:app_commands.Choice[st
         return
 
     # Garry's Mod has his own background (enemyBackgrounds in utils.py), every other fight is on purple2
-    background_file = backgrounds[enemyBackgrounds.get(enemies.value, DEFAULT_BACKGROUND)]
+    background_file = backgrounds[enemyBackgrounds.get(enemy, DEFAULT_BACKGROUND)]
 
     # comnbine background and sprite images ontop one another using PIL
     background_image = Image.open(background_file)
@@ -1933,10 +1949,14 @@ async def battle(interaction: discord.Interaction,enemies:app_commands.Choice[st
     enemyList = []
     enemy_sprites = []
 
-    if enemies.name == "Grunt":
-        enemy_sprites.append((enemies.name, enemyImages[enemies.name], enemySpots[enemies.name]))
-        enemyList.append(enemies.name)
-    elif enemies.name == "Ruffian":
+    if enemy in enemyGroups:
+        # several different enemies at once (Heroes of Legend)
+        enemyList += enemyGroups[enemy]["enemies"]
+        enemy_sprites += [(name, enemyImages[name], spot) for name, spot in enemyGroups[enemy]["spots"].items()]
+    elif enemy == "Grunt":
+        enemy_sprites.append((enemy, enemyImages[enemy], enemySpots[enemy]))
+        enemyList.append(enemy)
+    elif enemy == "Ruffian":
         # 50/50 if 2 or 1 ruffians show up
         roll = random.random()
         if roll < 0.5:
@@ -1949,8 +1969,8 @@ async def battle(interaction: discord.Interaction,enemies:app_commands.Choice[st
             enemy_sprites.append(("Ruffian1", enemyImages["RuffianBack"], enemySpots["RuffianSolo"]))
             enemyList.append("Ruffian1")
     else:
-        enemy_sprites.append((enemies.name, enemyImages[enemies.name], enemySpots[enemies.name]))
-        enemyList.append(enemies.name)
+        enemy_sprites.append((enemy, enemyImages[enemy], enemySpots[enemy]))
+        enemyList.append(enemy)
 
     for a in enemyList:
         print("ENEMY IN LIST:", a)
@@ -1968,25 +1988,25 @@ async def battle(interaction: discord.Interaction,enemies:app_commands.Choice[st
         {"$set": {"inBattle": True}}
     )
 
-    enemy_title = enemies.name if len(enemyList) == 1 else f"{len(enemyList)} {enemies.name}s"
+    enemy_title = enemy if len(enemyList) == 1 or enemy in enemyGroups else f"{len(enemyList)} {enemy}s"
     # Grist for winning comes from gristRewards in utils.py ("Ruffian x2" when 2 ruffians showed up)
-    reward_name = enemies.name if len(enemyList) == 1 else f"{enemies.name} x{len(enemyList)}"
+    reward_name = enemy if len(enemyList) == 1 or enemy in enemyGroups else f"{enemy} x{len(enemyList)}"
     if reward_name not in gristRewards:
         print(f"No Grist reward for {reward_name!r} in gristRewards (utils.py), winning this battle gives 0 Grist")
     grist_reward = gristRewards.get(reward_name, 0)
     # bosses (bossEnemies in utils.py) only give half Grist (rounded up) once the player has beaten that boss 5 times
-    boss_wins = (user_data.get("boss_wins") or {}).get(enemies.name, 0) if enemies.name in bossEnemies else None
+    boss_wins = (user_data.get("boss_wins") or {}).get(enemy, 0) if enemy in bossEnemies else None
     # the half Grist lasts BOSS_HALF_REWARD_HOURS after the 5th win, then the wins against that boss count from 0 again
-    half_until = (user_data.get("boss_half_until") or {}).get(enemies.name, 0)
+    half_until = (user_data.get("boss_half_until") or {}).get(enemy, 0)
     if boss_wins is not None and boss_wins >= BOSS_FULL_REWARD_WINS and time.time() >= half_until:
         boss_wins = 0
         inventory_collection.update_one(
             {"user_id": interaction.user.id},
-            {"$set": {f"boss_wins.{enemies.name}": 0}, "$unset": {f"boss_half_until.{enemies.name}": ""}}
+            {"$set": {f"boss_wins.{enemy}": 0}, "$unset": {f"boss_half_until.{enemy}": ""}}
         )
     if boss_wins is not None and boss_wins >= BOSS_FULL_REWARD_WINS:
         grist_reward = (grist_reward + 1) // 2
-    battle_view = BattleView(interaction.user.id, enemy_title, grist_reward, enemies.name, boss_wins)
+    battle_view = BattleView(interaction.user.id, enemy_title, grist_reward, enemy, boss_wins)
     battle_view.half_until = half_until
     battle_view.scene = (scene_base, enemy_sprites, team)  # for drawing the picture again when someone goes down or gets summoned
     battle_view.update_scene()  # someone can already be down before round 1 is shown (an item made the team skip turns)

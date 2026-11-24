@@ -108,16 +108,20 @@ Players earn Grist by **winning** a /battle. Losing, retreating or letting the b
 | Teniente | 18 |
 | Conquistador | 22 |
 | Jack Noir | 35 |
+| Draconian Dignitary | 35 |
+| Courtyard Droll | 30 |
+| Hegemonic Brute | 45 |
+| Heroes of Legend (John, Rose, Dave and Jade) | 0 |
 | Garry's Mod | 50 |
 
 Players can spend Grist on items, or on rolls with the **Buy a Roll** button in /item store. A roll costs 15 Grist and they can buy as many as they like. To change the price, edit **rollPrice** in utils.py and restart the bot.
 The **Buy 10 Rolls** button gives 10 rolls for 135 Grist, also as many times as they like. To change it, edit **rollBundleAmount** and **rollBundlePrice** in utils.py and restart the bot.
 
-To change the battle amounts, edit **gristRewards** in utils.py (search for it with CTRL + F) and restart the bot. A new enemy needs a line there too, otherwise beating it gives 0 Grist and the console says so.
+To change the battle amounts, edit **gristRewards** in utils.py (search for it with CTRL + F) and restart the bot. A new enemy needs a line there too, otherwise beating it gives 0 Grist and the console says so. It also has to be added to a category in **battleCategories** (utils.py), otherwise it doesn't show up in /battle.
 
 **The Conquistador steals Grist** (Loot & Pillage): every party member that goes down while he is standing loots 10 Grist. Beating him gets all of it back on top of the reward. Losing, retreating or timing out loses it (a player can't go below 0 Grist). To change the amount or give it to another enemy, edit **enemyLoot** in utils.py.
 
-**Bosses** (Jack Noir and Garry's Mod) only pay full Grist for a player's first 5 wins against that boss. After the 5th win, that boss gives that player half (rounded up, so Jack Noir gives 18 and Garry's Mod 25) for the next 24 hours. Once the 24 hours are over, their wins against that boss count from 0 again, so they get 5 more full-Grist wins. Wins are counted per boss in **boss_wins** on each player's inventory document, and the time the half Grist ends is in **boss_half_until**. To change which enemies are bosses, the number of full-Grist wins or how long the half Grist lasts, edit **bossEnemies**, **BOSS_FULL_REWARD_WINS** and **BOSS_HALF_REWARD_HOURS** in utils.py.
+**Bosses** (Jack Noir, the Draconian Dignitary, the Courtyard Droll, the Hegemonic Brute and Garry's Mod) only pay full Grist for a player's first 5 wins against that boss. After the 5th win, that boss gives that player half (rounded up, so Jack Noir gives 18 and Garry's Mod 25) for the next 24 hours. Once the 24 hours are over, their wins against that boss count from 0 again, so they get 5 more full-Grist wins. Wins are counted per boss in **boss_wins** on each player's inventory document, and the time the half Grist ends is in **boss_half_until**. To change which enemies are bosses, the number of full-Grist wins or how long the half Grist lasts, edit **bossEnemies**, **BOSS_FULL_REWARD_WINS** and **BOSS_HALF_REWARD_HOURS** in utils.py.
 
 To give someone Grist by hand (for testing or as a reward), use MongoDB Compass:
 1. Open the **jitstuck** database, then the **inventory** collection.
