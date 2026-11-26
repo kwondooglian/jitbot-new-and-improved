@@ -77,23 +77,27 @@ Players buy items with **Grist** in **/item store**, put one in their team's ite
 | Item | Price | What it does |
 |---|---|---|
 | Agent Knife | 35 | +5% ATK and +10% EVA for every team member |
-| Dersite Enforcer Hat | 50 | Every team member takes 5% less damage |
-| Dersite Longman's Spear | 50 | +15% ACC for every team member |
+| Dersite Enforcer Hat | 250 | +10% max HP for every team member |
+| Dersite Longman's Spear | 325 | +15% ATK and +15% ACC for the 3rd member of the team |
 | Lucky Coin | 30 | Every hit your team lands has a 2% chance to be a critical hit for 1.5x damage |
 | Perfectly Generic Object | 5 | +1 HP, +1 ATK, 1% less damage taken, +1% EVA and +1% ACC for every team member, only during the first 3 turns of each battle |
 | Bag of Purina Treats | 45 | On turns 5, 10, 15 and so on, each team member heals 5% of their max HP |
-| Dersite Knuckledusters | 20 | +5% ACC for every team member |
+| Dersite Knuckledusters | 275 | +20% damage for basic attacks (each character's first move) |
 | Protein Brick | 75 | +50% ATK for every team member, but every turn there's a 50% chance the whole team hits themselves in the head with it and skips its turn |
 | Knife Noir | Not sold | Every hit from a character's basic attack (their first move, like Punch or Dropkick) gives the enemy a stack of Bleed: 3% of its max HP at the end of the turn. An enemy can have at most 3 stacks at once. Has a 10% chance to drop when you beat Jack Noir |
 | Noah's Larpometer | 65 | +10% Grist for every battle your team wins (rounded up), but nobody's HP can be seen during battles |
 | Samsung Camera | 40 | The enemy team skips its first turn of each battle |
 | Huawei Laptop | Not sold | Your whole team skips its first 3 turns of each battle, then gets +25% ATK, 25% less damage taken and +25% ACC for the rest of the battle. Has a 10% chance to drop when you beat Garry's Mod |
+| Ultimate Weapon | Not sold | Adds an **Absorb** button to battles (explained below). Has a 20% chance to drop when you beat the Heroes of Legend |
 
 How items work:
  - A player can own one of each item. Equipping doesn't use the item up, and swapping puts the old item back with their other items.
  - The item is locked in when a battle starts. Swapping items during a battle only counts from the next battle.
  - EVA and ACC bonuses are added onto the % chance, the same way ability buffs work. A "turn" is one full round of a battle.
  - Item bonuses only exist during battles. They are never saved onto the characters.
+ - Items don't work in the Heroes of Legend fight (**noItems** in **enemyGroups**, utils.py). The Heroes also get the first turn there (**goesFirst**).
+
+**The Ultimate Weapon** shows an **Absorb** button in battles while it is equipped. Absorb wins the fight on the spot, with the normal Grist, drops and boss wins, and every enemy that was still standing goes into the weapon. As long as they are in there, all enemies in that player's battles get their base ATK, DEF and EVA added on (no HP or ACC), even when the weapon isn't equipped. The weapon holds one fight's enemies at a time, so the button turns into **Release**. Release puts them into the current fight at full HP and takes their stats off the other enemies again. Winning that fight empties the weapon. Losing, retreating or timing out puts them back in. After a Release, Absorb works again from the next battle. What is in the weapon is saved as **absorbed** on the player's inventory document.
 
 ### Grist
 Players earn Grist by **winning** a /battle. Losing, retreating or letting the battle time out gives nothing.
@@ -179,11 +183,14 @@ To **change** an item, hover over its document in Compass, click the pencil, cha
 | `grist_bonus` | More Grist for every battle the team wins (rounded up) | `percent` |
 | `skip_enemy_turns` | The enemy team skips its first few turns of each battle | `turns` |
 | `delayed_stat_percent` | Like stat_percent, but it only starts after the first few turns and then lasts the rest of the battle | the stats, plus `turns` (3 = it starts on turn 4) |
+| `basic_attack_damage` | Basic attacks (each character's first move) do that % more damage | `percent` |
+| `absorb` | The Absorb / Release button, like the Ultimate Weapon | none |
 
  - What the stat numbers do: `hp` and `attack` are a % with stat_percent and a flat amount with stat_flat. `defense` always means the team takes that % less damage. `evasion` and `accuracy` are added onto the % chance to dodge or hit. The short names `atk`, `def`, `eva` and `acc` work too.
  - **in_store**, **drop_from** and **drop_chance** (optional): for an item that can't be bought and drops from an enemy instead, like Knife Noir. Use `"in_store": false`, the /battle enemy like `"drop_from": "Jack Noir"` and the % chance like `"drop_chance": 10`.
  - **skip_chance** and **skip_text** (optional): a downside like the Protein Brick has. skip_chance is the % chance every turn that the whole team skips its turn, and skip_text is what the battle log says when it happens.
  - **skip_turns** (optional): a downside like the Huawei Laptop has. The whole team always skips its first that many turns of each battle, like `"skip_turns": 3`. skip_text works with it too.
+ - **team_slot** (optional, for the stat effects): only that member of the team gets the stats, like the Dersite Longman's Spear's `"team_slot": 3`.
  - **hide_hp** (optional): a downside like Noah's Larpometer has. With `"hide_hp": true` (Boolean in Compass) nobody's HP can be seen in the battle embed.
  - **max_stacks** (optional, for `basic_attack_bleed`): the most stacks of Bleed one enemy can have at once, like Knife Noir's `"max_stacks": 3`. Hits on an enemy that already has that many don't add another stack. Leave it out (or use 0) for no limit.
 

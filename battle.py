@@ -2,10 +2,10 @@ import copy
 import random
 # what some enemies' passives use: if utils.py doesn't have one of these (an older copy of it got saved over a newer one),
 # battles still work without that passive and the console says what is missing
-enemySummons, enemyLoot, enemyBlasts, enemyForesight, enemyPremonitions, enemyRewinds, enemyChipRewinds = {}, {}, {}, [], {}, {}, {}
+enemySummons, enemyLoot, enemyBlasts, enemyForesight, enemyPremonitions, enemyRewinds, enemyChipRewinds, enemyNegates, enemyLastWords = {}, {}, {}, [], {}, {}, {}, {}, {}
 from utils import *
 import utils
-for setting in ("enemySummons", "enemyLoot", "enemyBlasts", "enemyForesight", "enemyPremonitions", "enemyRewinds", "enemyChipRewinds"):
+for setting in ("enemySummons", "enemyLoot", "enemyBlasts", "enemyForesight", "enemyPremonitions", "enemyRewinds", "enemyChipRewinds", "enemyNegates", "enemyLastWords"):
   if not hasattr(utils, setting):
     print(f"[UTILS WARNING] utils.py has no {setting}, so the passive that uses it is off. Was an older copy of utils.py saved over a newer one?")
 import item_helper  # the equipped item (items are in MongoDB), item_helper.py does what it does in battle
@@ -32,12 +32,15 @@ LOG_LIMIT = 40      # only remember the newest lines of each battle log (main.py
 # START / ADVANCE / END (the functions main.py calls)
 # ============================================================================
 
-def startBattle(discordID, team, enemies, item=None):
+def startBattle(discordID, team, enemies, item=None, absorbed=()):
+  # absorbed = the foes inside the player's Ultimate Weapon, every enemy gets their base stats (also when it isn't equipped)
   print("Battle Started with user", discordID)
+  absorbed = [foe for foe in absorbed if foe in enemyAttributes]
+  group = next((group for group in enemyGroups.values() if group["enemies"] == enemies), {})  # Heroes of Legend
   allAbilities[discordID] = getAllAbilities(discordID, team, enemies)
   turnOrder[discordID] = calculateTurnOrder(discordID, team, enemies)
   # Get hp and defense of players and place into battleEHP
-  battleStats[discordID] = getStats(discordID, team, enemies)
+  battleStats[discordID] = getStats(discordID, team, enemies, absorbed)
   battleEffects[discordID] = []
   battleLog[discordID] = []
   battleInfo[discordID] = {
@@ -55,20 +58,30 @@ def startBattle(discordID, team, enemies, item=None):
     "blownUp": False,         # the Courtyard Droll's Hidden C4 took the whole team down (he wins, even if it took him down too)
     "blastsDue": [],          # (side, unit, blast) for every enemy that is about to blow up (the Courtyard Droll's Hidden C4)
     "rewindsDue": [],         # (who rewinds, the ally that took the damage) for every Rewind that is about to happen (Dave)
+    "fallen": [],             # enemies that went down in this move (Dave's Rewind can bring them back, enemyLastWords happen if not)
     "damageDone": {},         # round: [(enemy, damage)] the team's moves did (SSR Steven's Reopen Old Wounds)
     "stolenGrist": 0,         # Grist the Conquistador looted (enemyLoot), main.py takes it away unless the player wins
     "result": None,           # "victory" or "defeat" once the battle is decided
     "item": None,             # the equipped item (item_helper.battleStart fills this in)
+    "absorbed": absorbed,     # the foes inside the Ultimate Weapon, main.py saves them when the player wins
+    "released": False,        # they were let out in this battle (nothing else can be absorbed until the next one)
   }
   print("Turn order is:", turnOrder[discordID])
 
   enemyNames = " & ".join(displayName(discordID, 'enemies', enemy) for enemy in enemies)
   addLog(discordID, f"⚔️ The battle against **{enemyNames}** begins!")
+  if item and group.get("noItems"):
+    addLog(discordID, "🚫 Items don't work in this fight.")
+    item = None
   item_helper.battleStart(discordID, item)  # the equipped item's bonuses for the team
-  startRound(discordID)
+  if absorbed:
+    attack, defense, evasion = absorbedStats(absorbed)
+    addLog(discordID, f"⚜️ Absorbed: **{foeNames(absorbed)}** (all enemies get +{attack} ATK, +{defense} DEF and +{evasion} EVA)")
+  if not group.get("goesFirst"):
+    startRound(discordID)
   whosTurn[discordID] = turnOrder[discordID][0]
-  if item_helper.teamSkipsTurn(discordID):
-    # the item (Protein Brick) made the team skip round 1: going on from the last team member runs the enemy turn first
+  if group.get("goesFirst") or item_helper.teamSkipsTurn(discordID):
+    # the enemies go first, or the item (Protein Brick) made the team skip round 1: going on from the last team member runs the enemy turn first
     whosTurn[discordID] = turnOrder[discordID][turnOrder[discordID].index("0") - 1]
     nextTurn(discordID)
 
@@ -167,6 +180,7 @@ def nextTurn(discordID):
       continue
     if battleInfo[discordID]['premonition']:
       # Rose's premonition: they use their basic attack (their first move) on their own
+      whosTurn[discordID] = unit
       basic, options = next(iter(allAbilities[discordID]['players'][unit].items()))
       optionChecks(discordID, 'players', unit, basic, options)
       checkBattleOver(discordID)
@@ -360,9 +374,7 @@ def endRound(discordID):
       applyStatChange(discordID, effect['side'], effect['unit'], effect['name'], gained, effect['attackTurns'], 'buff')
       addLog(discordID, f"😡 **{displayName(discordID, effect['side'], effect['unit'])}** lost {effect['hpLost']} HP: {formatStats(gained)}{turnsText(effect['attackTurns'])}")
   # enemies that blow up from / get summoned by damage at the end of the round (Burn, Bleed, Void Spot) do it now that the timers are done
-  processBlasts(discordID)
-  processRewinds(discordID)
-  processSummons(discordID)
+  afterMove(discordID)
   clampAllHP(discordID)
 
 def tickVoidSpot(discordID):
@@ -380,17 +392,23 @@ def tickVoidSpot(discordID):
   foeSide = otherSide(ownerSide)
   attack = attackStat(discordID, ownerSide, owner) if isAlive(discordID, ownerSide, owner) else battleStats[discordID][ownerSide][owner]['attack']
   blasts = []
+  before = rememberEnemies(discordID, ownerSide)
   for foe in aliveUnits(discordID, foeSide):
     damage = max(1, round(attack * spot['power'] / 100 * damageTakenMultiplier(discordID, foeSide, foe)))
     blasts.append((foe, dealDamage(discordID, foeSide, foe, damage)))
+  negated = negateAttack(discordID, owner, before)
   hits = ", ".join(f"**{displayName(discordID, foeSide, foe)}** for {damage}" for foe, damage in blasts)
   addLog(discordID, f"🌀 The Void Spot bursts at {spot['power']}% power and hits {hits}!")
+  if negated:
+    addLog(discordID, negated)
 
 def checkBattleOver(discordID):
   # Returns "victory" / "defeat" once one side is out of units, otherwise None
   info = battleInfo[discordID]
   if info['result']:
     return info['result']
+  if not aliveUnits(discordID, 'enemies'):
+    processLastWords(discordID)  # Jade's Doggysplosion goes off even if she was the last one
   if not aliveUnits(discordID, 'enemies') and not info['blownUp']:
     info['result'] = 'victory'
   elif not aliveUnits(discordID, 'players'):
@@ -443,6 +461,7 @@ def optionChecks(discordID, side, actor, abilityName, options, chosenTarget=None
       move['boost'] = move.get('boost', 1) * (1 + effect['damageBoost'] / 100)
       move['parts'].append(f"{effect['name']} 🎯 (+{effect['damageBoost']:g}% damage)")
 
+  before = rememberEnemies(discordID, side)  # Dave (enemyNegates)
   extraTurn = False
   if 'O' in letters and 'chance' in params and random.randint(1, 100) > params['chance']:
     # Option O: luck based move that didn't work this time
@@ -470,15 +489,16 @@ def optionChecks(discordID, side, actor, abilityName, options, chosenTarget=None
     refrain['melody'] = abilityName
     move['parts'].append(f"the Melody of {abilityName} is remembered 🎵")
 
+  negated = negateAttack(discordID, actor, before)
   writeMoveLog(discordID, move)
+  if negated:
+    addLog(discordID, negated)
   # SR Binktop's Parry: his counter attacks go after the attack they answer, so the log reads in order
   for counterSide, countering, counterName, attacker in move.get('counters', []):
     if isAlive(discordID, counterSide, countering) and isAlive(discordID, side, attacker):
       optionChecks(discordID, counterSide, countering, counterName, allAbilities[discordID][counterSide][countering][counterName], attacker, counter=True)
   # the Courtyard Droll's C4 goes off, Dave rewinds, and enemies summoned by this move's damage (Garry's Mod) come in, after it is in the log
-  processBlasts(discordID)
-  processRewinds(discordID)
-  processSummons(discordID)
+  afterMove(discordID)
   return extraTurn
 
 def resolveMove(discordID, move, letters, params, chosenTarget):
@@ -517,6 +537,12 @@ def resolveMove(discordID, move, letters, params, chosenTarget):
     # R Homestuck's Rules for thee (enemyTurn does the skipping)
     info['skipEnemyTurn'] = True
     parts.append("the enemies lose their next turn")
+  if params.get('cleanseTeam'):
+    # Rose's Lessons in Showmanship
+    team = aliveUnits(discordID, side)
+    for unit in team:
+      cleanse(discordID, side, unit)
+    parts.append(f"cleared all debuffs on {groupName(discordID, side, team, actor)} ✨")
   if params.get('shuffleTeam'):
     parts.append(shuffleTeam(discordID))  # Jade's Spatial Shuffle
   if params.get('allyCost'):
@@ -819,7 +845,7 @@ def hostileMove(discordID, move, letters, params, chosenTarget):
         addStatus(discordID, side, actor, "Doom Mark", addStacks=1, stackLabel=True)
         markedAttacker = True
       damage, note = computeDamage(discordID, side, actor, foeSide, target, params, bonus, flatBonus)
-      boost, extra = move.get('boost', 1), ""  # SSR Casey's Refrain
+      boost, extra = move.get('boost', 1) * item_helper.basicAttackBoost(discordID, side, actor, move['ability']), ""  # SSR Casey's Refrain
       # SSR Casey's Music Box: more damage if the target has a debuff on that stat
       for code, percent in params.get('bonusVsDebuffed', {}).items():
         if any(effect['kind'] == 'debuff' and effect['stats'].get(code, 0) < 0 for effect in getEffects(discordID, foeSide, target)):
@@ -978,17 +1004,8 @@ def afterHit(discordID, targetSide, target, letters, params, parts):
     addStatus(discordID, targetSide, target, "Stunned", turns=params['stun'], addStacks=0, skipTurn=True, skipText=("💫", "is stunned"))
     parts.append(f"{targetName} is Stunned 💫{turnsText(params['stun'])}")
   # Dave's 1/2Sword Swipe: Freeze stacks, enough of them and the target is Frozen, so it skips its next turn
-  freeze = params.get('freeze')
-  if freeze and isDebuffImmune(discordID, targetSide, target):
-    parts.append(f"{targetName} is immune to Freeze")
-  elif freeze:
-    status = addStatus(discordID, targetSide, target, "Freeze", turns=freeze['turns'], stackLabel=True)
-    if status['stacks'] >= freeze['frozenAt']:
-      removeEffect(discordID, status)
-      addStatus(discordID, targetSide, target, "Frozen", turns=1, addStacks=0, skipTurn=True, skipText=("🧊", "is frozen solid"))
-      parts.append(f"{targetName} is Frozen 🧊{turnsText(1)}")
-    else:
-      parts.append(f"Freeze x{status['stacks']} on {targetName}{turnsText(freeze['turns'])}")
+  if params.get('freeze'):
+    parts.append(applyFreeze(discordID, targetSide, target, params['freeze']))
   # SR Binktop's Code Rot: every hit that lands has a chance to debuff the target (it refreshes instead of stacking)
   hitDebuff = params.get('hitDebuff')
   if hitDebuff and random.randint(1, 100) <= hitDebuff.get('chance', 100):
@@ -1001,6 +1018,51 @@ def afterHit(discordID, targetSide, target, letters, params, parts):
     if effect.get('breaksOnHit'):
       removeEffect(discordID, effect)
       parts.append(f"{targetName}'s {effect['name']} was broken")
+
+def applyFreeze(discordID, side, unit, freeze):
+  # 1 stack of Freeze, enough of them turn into Frozen. Returns the text for the log
+  name = f"**{displayName(discordID, side, unit)}**"
+  if isDebuffImmune(discordID, side, unit):
+    return f"{name} is immune to Freeze"
+  status = addStatus(discordID, side, unit, "Freeze", turns=freeze['turns'], stackLabel=True)
+  if status['stacks'] < freeze['frozenAt']:
+    return f"Freeze x{status['stacks']} on {name}{turnsText(freeze['turns'])}"
+  removeEffect(discordID, status)
+  frozen = addStatus(discordID, side, unit, "Frozen", turns=1, addStacks=0, skipTurn=True, skipText=("⚙️", "is frozen in time"))
+  if battleInfo[discordID]['phase'] == 'players':
+    frozen['fresh'] = True  # they already used this turn, so it counts for their next one
+  return f"{name} is Frozen ⚙️{turnsText(1)}"
+
+def rememberEnemies(discordID, side):
+  # Dave (enemyNegates): how the enemies are before a move of the party, None when nobody can negate it
+  negator = next((enemy for enemy in aliveUnits(discordID, 'enemies') if battleStats[discordID]['enemies'][enemy].get('negates')), None)
+  if side != 'players' or not negator:
+    return None
+  info = battleInfo[discordID]
+  return {
+    "negator": negator,
+    "stats": copy.deepcopy(battleStats[discordID]['enemies']),
+    "effects": copy.deepcopy([effect for effect in battleEffects[discordID] if effect['side'] == 'enemies']),
+    "info": {key: list(info[key]) for key in ('pending', 'summonsDue', 'blastsDue', 'rewindsDue', 'fallen')},
+    "damageDone": list(info['damageDone'].get(info['round'], [])),
+  }
+
+def negateAttack(discordID, actor, before):
+  # Dave (enemyNegates): if the move did too much damage to 1 of the enemies, they all go back to how they were before it and the user
+  # gets Freeze. Returns the text for the log, None when the move counts
+  enemies, info = battleStats[discordID]['enemies'], battleInfo[discordID]
+  if not before or not isAlive(discordID, 'players', actor):
+    return None
+  negates = before['stats'][before['negator']]['negates']
+  if not any(enemies[unit].get('tookThisTurn', 0) - old.get('tookThisTurn', 0) >= negates['damage'] for unit, old in before['stats'].items()):
+    return None
+  for unit, old in before['stats'].items():
+    enemies[unit].clear()
+    enemies[unit].update(old)
+  battleEffects[discordID] = [effect for effect in battleEffects[discordID] if effect['side'] != 'enemies'] + before['effects']
+  info.update(before['info'])
+  info['damageDone'][info['round']] = before['damageDone']
+  return f"⏪ **{displayName(discordID, 'enemies', before['negator'])}** negates it, nothing happened! {applyFreeze(discordID, 'players', actor, negates['freeze'])}"
 
 def accEvaCheck(discordID, side, attacker, target, params=None):
   # returns 1 of 3 things, 0 = Hit, 1 = Miss, 2 = Evade
@@ -1153,9 +1215,13 @@ def releaseChannel(discordID, channel):
     target = release['target'] if release.get('target') in foes else random.choice(foes)
     damage = (computeDamage(discordID, side, unit, foeSide, target, {"damage": release.get('damage', 0)})[0]
               + computeDamage(discordID, side, unit, foeSide, target, {"percentMaxHP": release.get('percentMaxHP', 0)})[0])
+    before = rememberEnemies(discordID, side)
     dealt = dealDamage(discordID, foeSide, target, damage)
     recordDamage(discordID, side, target, dealt)
+    negated = negateAttack(discordID, unit, before)
     addLog(discordID, f"⚡ {name} unleashes **{release['ability']}** on **{displayName(discordID, foeSide, target)}** for {dealt}!")
+    if negated:
+      addLog(discordID, negated)
   stunTurns = release.get('stunTurns', 1)
   addStatus(discordID, side, unit, "Stunned", turns=stunTurns, addStacks=0, skipTurn=True, skipText=("💫", "is stunned"))
   addLog(discordID, f"💫 {name} is Stunned{turnsText(stunTurns)}")
@@ -1302,6 +1368,10 @@ def reverseDebuffs(discordID, side, unit):
     count += 1
   return count
 
+def debuffCount(discordID, side, unit):
+  # how many different debuffs the unit has, Burn and Bleed count as 1 each (the ones cleanse takes off)
+  return len({effect['name'] for effect in getEffects(discordID, side, unit) if effect['kind'] == 'debuff' or (effect['kind'] == 'dot' and not effect['heal'])})
+
 def stackCount(discordID, side, unit, name):
   status = findEffect(discordID, side, unit, name, 'status')
   return status['stacks'] if status else 0
@@ -1386,7 +1456,7 @@ def dealDamage(discordID, side, unit, amount, chip=False):
       battleInfo[discordID]['summonsDue'] += [(side, unit)] * due
   # Dave (enemyRewinds): an ally of his that takes more than "rewindOver" damage in 1 turn makes him Rewind (processRewinds does it)
   if side == 'enemies':
-    stats['tookThisTurn'] = stats.get('tookThisTurn', 0) + hpBefore - stats['ehp']
+    stats['tookThisTurn'] = stats.get('tookThisTurn', 0) + (min(amount, hpBefore) if chip else amount)
     for ally in aliveUnits(discordID, side):
       limit = battleStats[discordID][side][ally].get('rewindOver')
       if limit and ally != unit and stats['tookThisTurn'] > limit:
@@ -1424,6 +1494,8 @@ def healUnit(discordID, side, unit, amount):
 
 def handleDefeat(discordID, side, unit):
   queueLog(discordID, f"💀 **{displayName(discordID, side, unit)}** was defeated!")
+  if side == 'enemies':
+    battleInfo[discordID]['fallen'].append(unit)
   martyr = next((effect for effect in getEffects(discordID, side, unit) if effect.get('explodePerMark')), None)
   # everything on a defeated unit goes away
   battleEffects[discordID] = [effect for effect in battleEffects[discordID] if not (effect['side'] == side and effect['unit'] == unit)]
@@ -1445,6 +1517,47 @@ def handleDefeat(discordID, side, unit):
       stats['ehp'] = 0
       battleEffects[discordID] = [effect for effect in battleEffects[discordID] if not (effect['side'] == side and effect['unit'] == other)]
       queueLog(discordID, f"💨 **{displayName(discordID, side, other)}** vanishes!")
+
+def afterMove(discordID):
+  # everything that happens once a move is in the log (again if one of them caused another one)
+  info = battleInfo[discordID]
+  while (info['blastsDue'] or info['rewindsDue'] or info['fallen']) and not info['result']:
+    processBlasts(discordID)
+    processRewinds(discordID)
+    processLastWords(discordID)
+  processSummons(discordID)
+
+def processLastWords(discordID):
+  # what Rose, Dave and Jade do when they are defeated (enemyLastWords in utils.py)
+  info = battleInfo[discordID]
+  fallen, info['fallen'] = info['fallen'], []
+  for unit in fallen:
+    last = battleStats[discordID]['enemies'][unit].get('lastWords')
+    if not last:
+      continue
+    parts, turns = [], last.get('turns')
+    lasts = turnsText(turns) if turns else " for the rest of the battle"
+    if last.get('percentMaxHP'):
+      for target in aliveUnits(discordID, 'players'):
+        damage = computeDamage(discordID, 'enemies', unit, 'players', target, {"percentMaxHP": last['percentMaxHP']})[0]
+        parts.append(f"**{displayName(discordID, 'players', target)}** took {dealDamage(discordID, 'players', target, damage)}")
+      info['blownUp'] = not aliveUnits(discordID, 'players')  # like the Courtyard Droll's C4: taking everyone down with her is a defeat
+    allies = aliveUnits(discordID, 'enemies') if last.get('buff') else []
+    for ally in allies:
+      applyStatChange(discordID, 'enemies', ally, last['text'], last['buff'], turns, 'buff')
+    if allies:
+      parts.append(f"{formatStats(last['buff'])} for {groupName(discordID, 'enemies', allies)}{lasts}")
+    if last.get('debuff'):
+      stats = {code: -amount for code, amount in last['debuff'].items()}
+      order, hit = turnOrder[discordID], []
+      for target in aliveUnits(discordID, 'players'):
+        # ATK / ACC debuffs: whoever already went this round gets it for their turn next round
+        went = turns and ('BB' in stats or 'DD' in stats) and info['phase'] == 'players' and order.index(target) <= order.index(whosTurn[discordID])
+        if applyStatChange(discordID, 'players', target, last['text'], stats, turns + 1 if went else turns, 'debuff'):
+          hit.append(target)
+      if hit:
+        parts.append(f"{formatStats(stats)} on {groupName(discordID, 'players', hit)}{lasts}")
+    addLog(discordID, f"{'💥' if last.get('percentMaxHP') else '🌟'} **{displayName(discordID, 'enemies', unit)}** {last['text']}! {', '.join(parts)}")
 
 def processBlasts(discordID):
   # the Courtyard Droll's Hidden C4 (enemyBlasts in utils.py): everyone still standing on both sides takes a % of their own max hp
@@ -1475,8 +1588,14 @@ def processRewinds(discordID):
     for unit in aliveUnits(discordID, 'enemies'):
       cleanse(discordID, 'enemies', unit)
       healUnit(discordID, 'enemies', unit, amount)
+    # allies that went down in the same move come back (enemyChipRewinds)
+    saved = [unit for unit in info['fallen'] if not enemies[unit].get('summoner')] if enemies[rewinder].get('chipRewind') else []
+    for unit in saved:
+      enemies[unit]['ehp'] = min(maxHP(discordID, 'enemies', unit), enemies[rewinder]['chipRewind'])
+    info['fallen'] = [unit for unit in info['fallen'] if unit not in saved]
     addLog(discordID, f"⏪ **{displayName(discordID, 'enemies', rewinder)}** uses **Rewind**! **{displayName(discordID, 'enemies', hurt)}** "
-                      f"took {amount} damage, so all enemies heal {amount} HP and their debuffs are cleared")
+                      f"took {amount} damage, so all enemies heal {amount} HP and their debuffs are cleared"
+                      + "".join(f", **{displayName(discordID, 'enemies', unit)}** is back with {enemies[unit]['ehp']} HP" for unit in saved))
   for _, unit in due:
     enemies[unit]['tookThisTurn'] = 0  # the next Rewind needs that much damage again
 
@@ -1491,13 +1610,55 @@ def processSummons(discordID):
     kind = battleStats[discordID][side][summoner]['summon']['summon']
     number = sum(1 for stats in battleStats[discordID][side].values() if stats.get('kind') == kind) + 1
     unit = f"{kind}{number}"
-    battleStats[discordID][side][unit] = dict(enemyStats(kind), kind=kind, summoner=summoner, slot=number - 1)
+    battleStats[discordID][side][unit] = dict(enemyStats(kind, info['absorbed']), kind=kind, summoner=summoner, slot=number - 1)
     allAbilities[discordID][side][unit] = enemyAbilities[kind]
     info['names'][side][unit] = kind if number == 1 else f"{kind} {number}"
     addLog(discordID, f"✨ **{displayName(discordID, side, summoner)}** summons **{displayName(discordID, side, unit)}**!")
     firstMove = next(iter(allAbilities[discordID][side][unit]), None)
     if firstMove:
       optionChecks(discordID, side, unit, firstMove, allAbilities[discordID][side][unit][firstMove])
+
+def absorbedStats(absorbed):
+  # the base ATK, DEF and EVA of the absorbed foes added together (Ultimate Weapon)
+  return [sum(enemyAttributes[foe][stat] for foe in absorbed) for stat in (1, 2, 4)]
+
+def foeNames(foes):
+  return " & ".join(getDisplayNames([], foes)['enemies'].values())
+
+def absorbButton(discordID):
+  # the Ultimate Weapon's button: (its name, can it be pressed), None when it isn't equipped
+  info = battleInfo[discordID]
+  if not item_helper.absorbs(discordID):
+    return None
+  return "Release" if info['absorbed'] else "Absorb", not info['released']
+
+def absorbedFoes(discordID):
+  # the foes inside the Ultimate Weapon, None when it isn't equipped. main.py asks before the battle gets thrown away
+  return battleInfo[discordID]['absorbed'] if battleExists(discordID) and item_helper.absorbs(discordID) else None
+
+def pressAbsorb(discordID):
+  # Absorb: every enemy that is still standing goes into the Ultimate Weapon, which wins the battle
+  # Release: the absorbed foes join this battle at full hp, and their stats come off the other enemies. They only leave the weapon for
+  # good when the player wins (main.py saves it then), otherwise releasing one and retreating would be a free way to get rid of it
+  info, enemies = battleInfo[discordID], battleStats[discordID]['enemies']
+  if not info['absorbed']:
+    info['absorbed'] = [unit for unit in aliveUnits(discordID, 'enemies') if not enemies[unit].get('summoner')]
+    for stats in enemies.values():
+      stats['ehp'] = 0
+    addLog(discordID, f"⚜️ Absorbed **{foeNames(info['absorbed'])}**!")
+    checkBattleOver(discordID)
+    return
+  foes, info['absorbed'], info['released'] = info['absorbed'], [], True
+  for unit, stats in enemies.items():
+    base = enemyStats(stats.get('kind', unit))
+    stats.update({stat: base[stat] for stat in ('attack', 'evasion', 'maxEhp')})
+    clampHP(discordID, 'enemies', unit)
+  for foe, name in getDisplayNames([], foes)['enemies'].items():
+    unit = f"Released {foe}"  # its own name could already be in this battle
+    enemies[unit] = dict(enemyStats(foe), kind=foe)
+    allAbilities[discordID]['enemies'][unit] = enemyAbilities[foe]
+    info['names']['enemies'][unit] = f"{name} (Released)"
+  addLog(discordID, f"⚜️ Released **{foeNames(foes)}** into the fight!")
 
 def explodeDoomMarks(discordID, side, unit, perMark):
   foeSide = otherSide(side)
@@ -1554,6 +1715,8 @@ def abilityStatus(discordID, side, unit, abilityName):
   marks = totalStacks(discordID, otherSide(side), "Doom Mark")
   if marks < params.get('requiresMarks', 0):
     return False, f"{marks}/{params['requiresMarks']} marks"
+  if 'moreDebuffsThan' in params and not any(debuffCount(discordID, side, ally) > params['moreDebuffsThan'] for ally in aliveUnits(discordID, side)):
+    return False, "not enough debuffs"  # Rose's Lessons in Showmanship
   if params.get('othersOnly') and not allyChoices(discordID, side, unit, params):
     return False, "no ally"  # SSR Casey: nobody else is standing, or they all have Refrain already
   return True, ""
@@ -1720,7 +1883,7 @@ def getAllAbilities(discordID, team, enemies):
   #    }
   #  }
 
-def getStats(discordID, team, enemies):
+def getStats(discordID, team, enemies, absorbed=()):
   allStats = {
     "players": {},
     "enemies": {}
@@ -1739,18 +1902,19 @@ def getStats(discordID, team, enemies):
     }
 
   for enemy in enemies:
-    allStats['enemies'][enemy] = enemyStats(enemy)
+    allStats['enemies'][enemy] = enemyStats(enemy, absorbed)
 
   return allStats
 
-def enemyStats(enemy):
+def enemyStats(enemy, absorbed=()):
   # an enemy's battle stats from enemyAttributes (also used for enemies summoned during the battle)
-  ehp = enemyAttributes[enemy][0] + int(enemyAttributes[enemy][2] * 1.2)
+  attack, defense, evasion = absorbedStats([enemy, *absorbed])
+  ehp = enemyAttributes[enemy][0] + int(defense * 1.2)
   stats = {
     "ehp": ehp,
     "maxEhp": ehp,
-    "attack": enemyAttributes[enemy][1],
-    "evasion": enemyAttributes[enemy][4],
+    "attack": attack,
+    "evasion": evasion,
     "accuracy": enemyAttributes[enemy][5],
     "moves": enemyAttributes[enemy][3]
   }
@@ -1768,7 +1932,11 @@ def enemyStats(enemy):
   if enemy in enemyRewinds:
     stats['rewindOver'] = enemyRewinds[enemy]  # Dave: dealDamage and processRewinds
   if enemy in enemyChipRewinds:
-    stats['chipRewind'] = enemyChipRewinds[enemy]  # Dave: dealDamage
+    stats['chipRewind'] = enemyChipRewinds[enemy]  # Dave: dealDamage and processRewinds
+  if enemy in enemyNegates:
+    stats['negates'] = enemyNegates[enemy]  # Dave: negateAttack
+  if enemy in enemyLastWords:
+    stats['lastWords'] = enemyLastWords[enemy]  # Rose, Dave and Jade: processLastWords
   return stats
 
 def getDisplayNames(team, enemies):

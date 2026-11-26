@@ -10,7 +10,7 @@ import random
 from pymongo.errors import PyMongoError
 
 from banner_helper import closestMatch, BOT_FOLDER, IMAGE_TYPES, MAX_IMAGE_BYTES
-from utils import enemyAttributes
+from utils import enemyAttributes, enemyGroups
 
 
 def isNumber(value):
@@ -34,10 +34,11 @@ OPTIONAL_FIELDS = ["price",                         # needed for every item that
                    "skip_chance", "skip_text",      # a downside any item can have (Protein Brick)
                    "skip_turns",                    # a downside: the team skips its first few turns (Huawei Laptop)
                    "hide_hp",                       # a downside: nobody's HP can be seen during battles (Noah's Larpometer)
-                   "max_stacks"]                    # the most Bleed stacks 1 enemy can have from it at once (Knife Noir)
+                   "max_stacks",                    # the most Bleed stacks 1 enemy can have from it at once (Knife Noir)
+                   "team_slot"]                     # only that member of the team gets the stats (Dersite Longman's Spear)
 
 # The /battle enemies an item can drop from ("Ruffian1" and "Ruffian2" are both "Ruffian")
-ENEMY_NAMES = sorted({enemy.rstrip("0123456789") for enemy in enemyAttributes})
+ENEMY_NAMES = sorted({enemy.rstrip("0123456789") for enemy in enemyAttributes} | set(enemyGroups))
 
 # The stats an item can change, the short names (like atk or def) work too
 STAT_FIELDS = {"hp": "hp", "attack": "attack", "atk": "attack", "defense": "defense", "defence": "defense", "def": "defense",
@@ -65,6 +66,8 @@ EFFECTS = {
     "grist_bonus": {"stats": False, "numbers": ["percent"]},                # more Grist for winning (Noah's Larpometer)
     "skip_enemy_turns": {"stats": False, "numbers": ["turns"]},             # the enemies skip their first turns (Samsung Camera)
     "delayed_stat_percent": {"stats": True, "numbers": ["turns"]},          # like stat_percent, but only after the first turns (Huawei Laptop)
+    "basic_attack_damage": {"stats": False, "numbers": ["percent"]},        # basic attacks do more damage (Dersite Knuckledusters)
+    "absorb": {"stats": False, "numbers": []},                              # the Absorb / Release button (Ultimate Weapon)
 }
 STAT_EFFECTS = [effect for effect, rules in EFFECTS.items() if rules["stats"]]
 PERCENT_EFFECTS = ["stat_percent", "delayed_stat_percent"]  # their hp and attack numbers are a %, not a flat amount
@@ -93,11 +96,11 @@ STARTING_ITEMS = [
     {"name": "Dersite Enforcer Hat", "price": 50,
      "description": "Large cap of the Dersite Grunt. Gives off a menacing aura.",
      "emoji": "🧢", "image": "graphics/items/grunthat.png",
-     "effect": "stat_percent", "defense": 5},
-    {"name": "Dersite Longman's Spear", "price": 50,
+     "effect": "stat_percent", "hp": 10},
+    {"name": "Dersite Longman's Spear", "price": 325,
      "description": "A long Dersite spear that helps your team line up their hits.",
      "emoji": "🔱", "image": "graphics/items/spearmanspear.png",
-     "effect": "stat_percent", "accuracy": 15},
+     "effect": "stat_percent", "attack": 15, "accuracy": 15, "team_slot": 3},
     {"name": "Lucky Coin", "price": 30,
      "description": "How did you get your hands on this?",
      "emoji": "🪙", "image": "graphics/items/luckycoin.png",
@@ -110,10 +113,10 @@ STARTING_ITEMS = [
      "description": "Dog treats to brighten your day and make you yip with joy.",
      "emoji": "🦴", "image": "graphics/items/treats.png",
      "effect": "periodic_heal", "every": 5, "percent": 5},
-    {"name": "Dersite Knuckledusters", "price": 20,
+    {"name": "Dersite Knuckledusters", "price": 275,
      "description": "Crack skulls with these Dersite Enforcer's knuckledusters!.",
      "emoji": "👊", "image": "graphics/items/dersiteknuckleduster.png",
-     "effect": "stat_percent", "accuracy": 5},
+     "effect": "basic_attack_damage", "percent": 20},
     {"name": "Protein Brick", "price": 75,
      "description": "Its structure, while prismatic, is completely unknowable.",
      "emoji": "🧱", "image": "graphics/items/proteinbrick.png",
@@ -136,6 +139,10 @@ STARTING_ITEMS = [
      "emoji": "💻", "image": "graphics/items/huaweilaptop.png",
      "effect": "delayed_stat_percent", "attack": 25, "defense": 25, "accuracy": 25, "turns": 3,
      "skip_turns": 3, "skip_text": "The Huawei Laptop is still booting up, so your team waits and skips its turn."},
+    {"name": "Ultimate Weapon", "in_store": False, "drop_from": "Heroes of Legend", "drop_chance": 20,
+     "description": "A weapon that never settles on one shape. It can swallow any foe whole, but nothing it swallows is ever really gone.",
+     "emoji": "⚜️", "image": "graphics/items/ultimateweapon.gif",
+     "effect": "absorb"},
 ]
 
 
@@ -262,6 +269,12 @@ def checkItem(typed):
                 item["stats"][stat] = value
         if not item["stats"]:
             return skip(f'the "{effect}" effect needs at least one stat number above 0, like "attack": 5')
+
+    # only 1 member of the team gets the stats (Dersite Longman's Spear), None = all of them
+    slot = typed.get("team_slot")
+    if slot is not None and (not isWholeNumber(slot) or not 1 <= slot <= 4):
+        return skip('team_slot has to be a whole number from 1 to 4, like "team_slot": 3.' + typeHint(slot))
+    item["team_slot"] = int(slot) if slot else None
 
     # the other numbers this kind of effect needs
     for field in rules["numbers"]:
@@ -392,10 +405,14 @@ def statWords(item):
     return joinWords(parts)
 
 
+def whoGetsIt(item):
+    return f"the {ordinal(item['team_slot'])} member of your team" if item.get("team_slot") else "every team member"
+
+
 def mainEffectText(item):
     effect = item["effect"]
     if effect in STAT_EFFECTS:
-        text = statWords(item) + " for every team member"
+        text = statWords(item) + " for " + whoGetsIt(item)
         if effect == "temp_stat_flat":
             turns = item["turns"]
             text += " during the first turn of each battle" if turns == 1 else f" during the first {turns} turns of each battle"
@@ -404,6 +421,11 @@ def mainEffectText(item):
         return text
     if effect == "grist_bonus":
         return f"+{item['percent']:g}% Grist for every battle your team wins (rounded up)"
+    if effect == "basic_attack_damage":
+        return f"+{item['percent']:g}% damage for your team's basic attacks (each character's first move, like Punch or Dropkick)"
+    if effect == "absorb":
+        return ("Absorb wins a fight instantly. While a foe is absorbed, every enemy you fight gets its base ATK, DEF and EVA. "
+                "Release lets it out into the fight you are in, win that fight and it is gone")
     if effect == "skip_enemy_turns":
         turns = item["turns"]
         return "The enemy team skips its first turn of each battle" if turns == 1 else f"The enemy team skips its first {turns} turns of each battle"
@@ -505,11 +527,13 @@ def battleStart(discordID, itemName):
         print(f"Equipped item {itemName!r} of user {discordID} isn't in the MongoDB items collection anymore, so it does nothing")
     if not item:
         return
-    state = {"data": item, "temporary": {}}  # temporary = what temp_stat_flat added to each team member
+    team = list(b.battleStats[discordID]['players'])
+    slot = item.get("team_slot")  # temporary = what temp_stat_flat added to each team member, units = who gets the stats
+    state = {"data": item, "temporary": {}, "units": team[slot - 1:slot] if slot else team}
     b.battleInfo[discordID]['item'] = state
     if item["effect"] in STAT_EFFECTS and item["effect"] != "delayed_stat_percent":  # delayed ones start in roundStart
-        for unit, stats in b.battleStats[discordID]['players'].items():
-            added = addStats(stats, item)
+        for unit in state["units"]:
+            added = addStats(b.battleStats[discordID]['players'][unit], item)
             if item["effect"] == "temp_stat_flat":
                 state["temporary"][unit] = added
     b.addLog(discordID, f"{icon(item)} **{item['name']}**: {item['effect_text']}")
@@ -538,8 +562,9 @@ def roundStart(discordID):
     # delayed_stat_percent (Huawei Laptop): the bonus starts on turn "turns" + 1 and lasts the rest of the battle
     if item["effect"] == "delayed_stat_percent" and roundNumber == item["turns"] + 1:
         for unit in b.aliveUnits(discordID, 'players'):
-            addStats(b.battleStats[discordID]['players'][unit], item)
-        b.addLog(discordID, f"{icon(item)} **{item['name']}** kicks in: {statWords(item)} for every team member for the rest of the battle!")
+            if unit in state["units"]:
+                addStats(b.battleStats[discordID]['players'][unit], item)
+        b.addLog(discordID, f"{icon(item)} **{item['name']}** kicks in: {statWords(item)} for {whoGetsIt(item)} for the rest of the battle!")
 
     # periodic_heal: every few rounds each team member that is still standing heals a % of their max hp
     if item["effect"] == "periodic_heal" and roundNumber % item["every"] == 0:
@@ -591,6 +616,12 @@ def hidesHP(discordID):
     return bool(state and state["data"]["hide_hp"])
 
 
+def absorbs(discordID):
+    """battle.py asks this: does the equipped item have the Absorb / Release button (Ultimate Weapon)."""
+    state = _battle().battleInfo[discordID].get('item')
+    return bool(state and state["data"]["effect"] == "absorb")
+
+
 def gristBonus(discordID, reward):
     """The BattleView asks this when a battle is won, before the battle is cleaned up.
     grist_bonus items (Noah's Larpometer) give that % more Grist, rounded up. Returns (extra Grist, the item) or (0, None)."""
@@ -599,6 +630,16 @@ def gristBonus(discordID, reward):
     if not reward or not state or state["data"]["effect"] != "grist_bonus":
         return 0, None
     return math.ceil(reward * state["data"]["percent"] / 100), state["data"]
+
+
+def basicAttackBoost(discordID, side, actor, abilityName):
+    """hostileMove() multiplies the damage of a hit by this. basic_attack_damage items (Dersite Knuckledusters) make every
+    character's basic attack (their first move) stronger."""
+    b = _battle()
+    state = b.battleInfo[discordID].get('item') if side == 'players' else None
+    if not state or state["data"]["effect"] != "basic_attack_damage" or abilityName != next(iter(b.allAbilities[discordID][side][actor])):
+        return 1
+    return 1 + state["data"]["percent"] / 100
 
 
 def hitLanded(discordID, side, actor, abilityName, foeSide, target):

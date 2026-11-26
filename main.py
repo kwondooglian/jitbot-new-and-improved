@@ -240,8 +240,8 @@ def ssr_treyEmbed():
     embed.add_field(name="DEF:", value=characterAttributes["ssr_trey"][2], inline=True)
     embed.add_field(name="EVA:", value=characterAttributes["ssr_trey"][3], inline=True)
     embed.add_field(name="ACC:", value=characterAttributes["ssr_trey"][4], inline=True)
-    embed.add_field(name=characterAttributes["ssr_trey"][5], value="Throw a mean right hook at the enemy.", inline=False)
-    embed.add_field(name=characterAttributes["ssr_trey"][6], value="Add a +100% eva buff and +10% acc buff to self for one turn. Performs a stabbing attack on one enemy that deals 10% max hp and true damage. Cannot be used for 2 turns.", inline=False)
+    embed.add_field(name=characterAttributes["ssr_trey"][5], value="Fling a doohickey of pure void at the enemy. It's a ranged attack, so a Void Spot swallows it.", inline=False)
+    embed.add_field(name=characterAttributes["ssr_trey"][6], value="Add a +100% eva buff and +10% acc buff to self for one turn. Performs a stabbing attack on one enemy that deals 80 + 5% of their max hp as true damage. Cannot be used for 2 turns.", inline=False)
     embed.add_field(name=characterAttributes["ssr_trey"][7], value="Redistribute the void into those around you. +50% eva buff to all other allies for 3 turns, but draws attacks to you for one turn. Cannot be used again for 4 turns.", inline=False)
     embed.add_field(name=characterAttributes["ssr_trey"][8], value="Nothing can't be seen, right? Centering all of the void you control into one spot should be able to create a concentrated spot of nothing, a nothing so strong that no thing can escape it. Create a miniature \"void spot\" that stays on the battle for 3 turns. When on the stage, all ranged attacks automatically miss. For each ranged attack performed, the power grows by 50%. After every turn, power grows by 100%. At the end of 3 turns, deals the combined percentage of atk to all enemies in one burst. Cannot be used again.", inline=False)
     return embed
@@ -282,7 +282,7 @@ def r_freeman2Embed():
     embed.add_field(name="EVA:", value=characterAttributes["r_freeman2"][3], inline=True)
     embed.add_field(name="ACC:", value=characterAttributes["r_freeman2"][4], inline=True)
     embed.add_field(name=characterAttributes["r_freeman2"][5], value="Slap the enemy while running past them.", inline=False)
-    embed.add_field(name=characterAttributes["r_freeman2"][6], value="Start hauling ass away from your opponent, skipping your attack this turn, but give a +35% eva buff to self and a +15% eva buff to all allies for this turn. Cannot be used for another 1 turn.", inline=False)
+    embed.add_field(name=characterAttributes["r_freeman2"][6], value="Start hauling ass away from your opponent, skipping your attack this turn, but give a +35% eva buff to self for this turn. Cannot be used for another 1 turn.", inline=False)
     embed.add_field(name=characterAttributes["r_freeman2"][7], value="Run at your enemies for a charging tackle! 45% chance to hit for 45 damage and stun the enemy for a turn! If missed, take 15 damage to self.", inline=False)
     return embed
 
@@ -1580,6 +1580,7 @@ def calculate_character_position(char_name, slot_index, background_size):
 #   - the buttons are the current character's abilities, target buttons (Options F / G), Skip and Retreat
 
 BATTLE_TIMEOUT = 300  # seconds without a button press before the battle ends by itself
+RELEASED_SHIFT = 130  # how far to the right of their usual spot foes released from the Ultimate Weapon stand
 
 # reason numbers for endBattle() in battle.py
 BATTLE_END_REASONS = {"retreat": 0, "defeat": 1, "victory": 2, "timeout": 3, "error": 4}
@@ -1635,7 +1636,7 @@ def newest_lines(lines, limit=1024):
 def build_battle_embed(user_id, enemy_name, prompt=None, ending=None):
     """The battle embed: whose turn it is, hp of both teams, the battle log and the battle screen image."""
     summary = getBattleSummary(user_id)
-    embed = discord.Embed(title=f"⚔️ Battle vs {enemy_name} — Round {summary['round']}", color=0x3f48cc)
+    embed = discord.Embed(title=f"⚔️ Battle vs {enemy_name} — Round {max(1, summary['round'])}", color=0x3f48cc)  # (0 = the Heroes' turn before round 1)
     if ending:
         embed.description, embed.colour = BATTLE_ENDINGS[ending]
     else:
@@ -1671,7 +1672,7 @@ class BattleView(discord.ui.View):
         self.show_ability_buttons()
 
     def show_ability_buttons(self):
-        """Row 1: the current character's abilities (greyed out while on cooldown), row 2: Skip and Retreat."""
+        """Row 1: the current character's abilities (greyed out while on cooldown), under it: Skip and Retreat (Absorb too with the Ultimate Weapon)."""
         self.layout += 1
         self.clear_items()
         for index, ability in enumerate(getAbilityButtons(self.user_id)):
@@ -1685,23 +1686,29 @@ class BattleView(discord.ui.View):
         """Options F / G: one button per possible target, plus Back, Skip and Retreat."""
         self.layout += 1
         self.clear_items()
-        for unit, name in targets:
-            button = discord.ui.Button(label=name[:80], style=discord.ButtonStyle.success, row=0)
+        for index, (unit, name) in enumerate(targets):
+            button = discord.ui.Button(label=name[:80], style=discord.ButtonStyle.success, row=index // 5)
             button.callback = self.target_pressed(ability_index, unit, self.layout)
             self.add_item(button)
-        back = discord.ui.Button(label="Back", style=discord.ButtonStyle.secondary, row=1)
+        back = discord.ui.Button(label="Back", style=discord.ButtonStyle.secondary, row=4)
         back.callback = self.back_pressed(self.layout)
         self.add_item(back)
         self.add_retreat_button()
 
     def add_retreat_button(self):
         # Skip goes right before Retreat so it sits directly to its left
-        skip = discord.ui.Button(label="Skip", style=discord.ButtonStyle.success, row=1)
+        skip = discord.ui.Button(label="Skip", style=discord.ButtonStyle.success, row=4)
         skip.callback = self.skip_pressed(self.layout)
         self.add_item(skip)
-        retreat = discord.ui.Button(label="Retreat", style=discord.ButtonStyle.danger, row=1)
+        retreat = discord.ui.Button(label="Retreat", style=discord.ButtonStyle.danger, row=4)
         retreat.callback = self.retreat_pressed
         self.add_item(retreat)
+        # Absorb / Release, only there when the Ultimate Weapon is equipped
+        absorb_state = absorbButton(self.user_id)
+        if absorb_state:
+            absorb = discord.ui.Button(label=absorb_state[0], style=discord.ButtonStyle.secondary, disabled=not absorb_state[1], row=4)
+            absorb.callback = self.absorb_pressed(self.layout)
+            self.add_item(absorb)
 
     async def check_press(self, interaction: discord.Interaction, layout=None):
         """Only the person battling can press the buttons, and only the newest ones."""
@@ -1750,6 +1757,27 @@ class BattleView(discord.ui.View):
                 return
             # an Option Z move: only the current character's action is skipped, then the battle carries on like after any move
             await self.take_turn(interaction, "skip", None)
+        return callback
+
+    def absorb_pressed(self, layout):
+        async def callback(interaction: discord.Interaction):
+            if not await self.check_press(interaction, layout):
+                return
+            foes = absorbedFoes(self.user_id)
+            pressAbsorb(self.user_id)
+            if getBattleResult(self.user_id):
+                await self.finish(interaction, "victory")
+                return
+            # Release: the foes stand in front of the enemies of this fight
+            released = []
+            for foe in foes:
+                picture = {"Ruffian1": "RuffianBack", "Ruffian2": "RuffianFront"}.get(foe, foe)
+                x, y = next((group["spots"][foe] for group in enemyGroups.values() if foe in group["spots"]), enemySpots.get(picture, (0, 0)))
+                released.append((f"Released {foe}", enemyImages[picture], (x + RELEASED_SHIFT, y)))
+            self.scene = (self.scene[0], self.scene[1] + released, self.scene[2])
+            self.drawn_scene = None  # so it gets drawn again
+            self.show_ability_buttons()
+            await interaction.response.edit_message(embed=build_battle_embed(self.user_id, self.enemy_name), view=self, **self.redraw_scene())
         return callback
 
     async def retreat_pressed(self, interaction: discord.Interaction):
@@ -1802,6 +1830,7 @@ class BattleView(discord.ui.View):
         # grist_bonus items (Noah's Larpometer), asked before battle.py throws the battle (and its equipped item) away
         bonus, bonus_item = gristBonus(self.user_id, self.grist_reward)
         stolen = stolenGrist(self.user_id)  # the Conquistador's Loot & Pillage, also asked before the battle is thrown away
+        absorbed = absorbedFoes(self.user_id)  # the Ultimate Weapon, this too
         if battleExists(self.user_id):
             endBattle(self.user_id, BATTLE_END_REASONS[ending])
         # set in mongodb battle over (and add the Grist in the same update when they won)
@@ -1832,6 +1861,11 @@ class BattleView(discord.ui.View):
             if lost:
                 update["$inc"] = {"grist": -lost}
             reward_text += f"\n💸 **{self.enemy_kind}** got away with **{lost}** of your Grist."
+        # the Ultimate Weapon: what is inside it only changes when they win (a released foe goes back in otherwise)
+        if ending == "victory" and absorbed is not None:
+            update["$set"]["absorbed"] = absorbed
+            if absorbed:
+                reward_text += f"\n⚜️ Absorbed: **{foeNames(absorbed)}**. Every enemy you fight gets their base ATK, DEF and EVA until you **Release** them."
         inventory_collection.update_one(
             {"user_id": self.user_id},
             update
@@ -1981,7 +2015,7 @@ async def battle(interaction: discord.Interaction, categories: app_commands.Choi
     combined_image_path = draw_battle_screen(interaction.user.id, scene_base, enemy_sprites, team)
 
     # battle.py sets up the turn order, hp and abilities for this user's battle (plus the equipped item's bonuses)
-    startBattle(interaction.user.id, team, enemyList, user_data.get("equipped_item"))
+    startBattle(interaction.user.id, team, enemyList, user_data.get("equipped_item"), user_data.get("absorbed", []))
     # set inbattle in mongodb
     inventory_collection.update_one(
         {"user_id": interaction.user.id},

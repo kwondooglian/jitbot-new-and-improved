@@ -204,9 +204,9 @@ enemyAttributes = {
     "Courtyard Droll": [550, 30, 15, 3, 35, 80, "Bull Penis Cane, 3 swipes at 1 party member: the 1st always hits, the 2nd has a 75% chance and the 3rd 50%", "Scamper, -20% acc for every party member for 2 turns", "Passive: Hidden C4, Once he drops below half HP it blows up: everyone on the battlefield takes 25% of their max HP, including himself"],
     "Hegemonic Brute": [1750, 55, 70, 2, 0, 75, "Smash, Rear up for 1 turn then smash all party members for full atk", "Unforeseen Bite, Bite 1 party member for 40 damage + 10% of their max HP and apply 2 stacks of bleed (-3% hp each, not if they already have 2)", "Trusty Axe, Attack all party members for 50% of atk"],
     "John": [425, 40, 35, 2, 75, 50, "Scarf Swipe, Basic attack", "Pop-O-Matic Vrillyhoo Hammer, 50 damage to 1 party member + 1 of 8 random effects: nothing / 2 stacks of bleed / -15% atk / -15% def / -15% eva / -15% acc / stun / heal himself for the damage done", "Windy Thing, Every 4 turns: 15% of max HP damage and -30% acc for 3 turns to all party members"],
-    "Rose": [375, 25, 35, 2, 10, 100, "Needlewand, Ranged basic attack", "Quill of Echidna, Ranged attack for 40 true damage, ignores the HP that comes from def", "Passive: Premonition, Every 6 turns the party can't choose their moves, everyone uses their basic attack", "Passive: Foresight, Her attacks always land and she can't get acc debuffs"],
-    "Dave": [500, 50, 50, 2, 5, 90, "1/2Sword Swipe, Attack all party members and apply 1 stack of freeze for 2 turns (3 stacks = frozen, they skip their next turn)", "Record Scratch, +25% atk and def for himself and all his allies until the end of the next turn, and all their attacks land", "Passive: Rewind, If an ally takes more than 150 damage in 1 turn, he clears all debuffs and heals himself and all his allies for that much right away", "Passive: His allies can't die from Burn / Bleed while he is standing, he rewinds them to 150 HP instead"],
-    "Jade": [400, 35, 40, 2, 8, 90, "Distort, Attack all party members for 50% of atk", "Sucker Punch, 15 damage to 1 party member, can't miss and stuns them for 1 turn", "Radioactive Spatial Rift, 3 stacks of bleed (-3% hp each) for all party members", "Spatial Shuffle, Every 3 turns: puts the party in a random order"]
+    "Rose": [375, 25, 35, 2, 10, 100, "Needlewand, Ranged basic attack", "Quill of Echidna, Ranged attack for 40 true damage, ignores the HP that comes from def", "Lessons in Showmanship, When 1 of her allies or herself has more than 4 different debuffs: clears all debuffs on all of them", "Passive: Premonition, Every 6 turns the party can't choose their moves, everyone uses their basic attack", "Passive: Foresight, Her attacks always land and she can't get acc debuffs", "Passive: When she is defeated, all party members get -100% acc for 1 turn"],
+    "Dave": [700, 70, 50, 2, 5, 90, "1/2Sword Swipe, Attack all party members and apply 1 stack of freeze for 2 turns (3 stacks = frozen, they skip their next turn)", "Record Scratch, +25% atk and def for himself and all his allies until the end of the next turn, and all their attacks land", "Passive: Rewind, If an ally takes more than 150 damage in 1 turn, he clears all debuffs and heals himself and all his allies for that much right away", "Passive: His allies can't die from Burn / Bleed or from a move that makes him Rewind while he is standing, he rewinds them to 150 HP instead", "Passive: Moves that deal 250 or more damage to an enemy are negated and whoever used it gets 1 stack of freeze", "Passive: When he is defeated, +50% def for all his allies and -50% def for all party members for 3 turns"],
+    "Jade": [500, 35, 40, 2, 8, 90, "Distort, Attack all party members for 50% of atk", "Sucker Punch, 15 damage to 1 party member, can't miss and stuns them for 1 turn", "Radioactive Spatial Rift, 3 stacks of bleed (-3% hp each) for all party members", "Spatial Shuffle, Every 3 turns: puts the party in a random order", "Passive: When she is defeated, a Doggysplosion deals 25% of max HP to all party members"]
 }
 
 # Enemies that blow up the first time they drop below "belowHP" % of their max hp (the Courtyard Droll's Hidden C4): everyone on
@@ -230,8 +230,21 @@ enemyRewinds = {
 }
 # Enemies that don't let their allies die from chip damage (Dave): while they are standing, an ally that would go down to Burn / Bleed
 # gets rewound instead, it goes on with that much hp and without its debuffs, as many times as it happens
+# (allies that go down in the same move that makes him Rewind come back with that much hp too)
 enemyChipRewinds = {
     "Dave": 150,
+}
+# Enemies that negate big attacks (Dave): while they are standing, a move of the party that does "damage" or more to 1 of the enemies does
+# nothing at all to any of them (no damage, no status effects), and whoever used it gets a stack of Freeze (the same as 1/2Sword Swipe's)
+enemyNegates = {
+    "Dave": {"damage": 250, "freeze": {"turns": 2, "frozenAt": 2}},
+}
+# What enemies do when they are defeated: "text" is for the battle log, "percentMaxHP" = damage to every party member (it can't be dodged),
+# "buff" for all enemies that are still standing, "debuff" on every party member, for "turns" (no turns = the rest of the battle)
+enemyLastWords = {
+    "Rose": {"text": "goes out in a burst of light", "debuff": {"DD": 100}, "turns": 1},
+    "Dave": {"text": "goes out with style", "buff": {"CC": 50}, "debuff": {"CC": 50}, "turns": 3},
+    "Jade": {"text": "goes out in a Doggysplosion", "percentMaxHP": 25},
 }
 
 # Enemies that steal Grist (the Conquistador's Loot & Pillage): every party member that goes down while this enemy is standing
@@ -243,10 +256,13 @@ enemyLoot = {
 # Fights against several different enemies at once, picked in /battle by this name (it needs a category and a Grist reward like an enemy)
 # "enemies" = who is in it, in their turn order
 # "spots" = where they stand (the top left corner of their picture), in the order they get drawn (the last one is in front of the others)
+# "goesFirst" = the enemies get a turn before round 1, "noItems" = the player's equipped item does nothing in this fight
 enemyGroups = {
     "Heroes of Legend": {
         "enemies": ["Dave", "Rose", "Jade", "John"],
         "spots": {"Dave": (14, 83), "Rose": (0, 212), "Jade": (106, 102), "John": (58, 221)},
+        "goesFirst": True,
+        "noItems": True,
     },
 }
 
@@ -298,7 +314,7 @@ characterAttributes = {
     "ssr_abraize": [400, 35, 35, 3, 90, "Accelerated Punch", "Fast Forward", "Rewind", "Universal Stabilizer"],
     "r_trey": [150, 12, 8, 3, 90, "Punch", "Irish Goodbye", "Cheesy Fries"],
     "sr_trey": [250, 15, 20, 3, 75, "Punch", "Drowsy", "Whispers from Beyond"],
-    "ssr_trey": [425, 30, 25, 30, 90, "Punch", "Cloak and Dagger", "Shroud", "Reality Sink"],
+    "ssr_trey": [425, 30, 25, 30, 90, "Void Doohickey", "Cloak and Dagger", "Shroud", "Reality Sink"],
     "r_noah": [125, 10, 8, 3, 90, "Punch", "Fiddle", "Bo"],
     "sr_noah": [180, 15, 8, 3, 92, "Gavel Strike", "Mock", "Defense Lawyer"],
     "r_freeman": [100, 8, 8, 10, 90, "Slap", "Ponder", "SMASH!"],
@@ -447,6 +463,9 @@ characterAttributes = {
 #   "endsTurn" = enemies only: using the move ends the enemy's turn, its other moves that turn don't happen (the Teniente's Riposte)
 #   "shuffleTeam" = enemies only: the party's turn order gets randomized (Jade's Spatial Shuffle)
 #   "useWhenReady" = enemies only: never picked at random, it is the enemy's first move on every turn it can be used (John's Windy Thing)
+#   "cleanseTeam" = clears all debuffs (and Burn / Bleed) on the user's whole team (Rose's Lessons in Showmanship)
+#   "moreDebuffsThan" = can only be used while 1 member of the user's team has more different debuffs than that: every move that debuffed
+#            them counts as 1, and so do Burn and Bleed no matter how many stacks (Rose's Lessons in Showmanship)
 #   "debuffSource": "name" = the Option E debuff counts as coming from that instead of the move (so different ones from 1 move add up)
 #   "nextMove": [move names] = enemies only: the enemy's next move is one of these (picked at random), even when it is
 #            next turn (Code of Honour -> Thrust, the Conquistador's Battle Cry -> Stab or Slash)
@@ -506,9 +525,9 @@ characterAbilities = {
     "Whispers from Beyond": ['C', 'D', 'H', {"buff": {"DD": 10}, "turns": 2, "cooldown": 1}]  # +10% accuracy for the team for 2 turns, 1 turn cooldown
   },
   "ssr_trey": {
-    "Punch": ['A', 'F'],                                            # Flat Damage using Attack Stat
-    # +100% eva and +10% acc to self for 1 turn, then stab 1 enemy for 10% of their max hp as true damage, 2 turn cooldown
-    "Cloak and Dagger": ['A', 'D', 'F', 'H', {"buff": {"EE": 100, "DD": 10}, "turns": 1, "percentMaxHP": 10,
+    "Void Doohickey": ['A', 'F', {"ranged": True}],                 # Flat Damage using Attack Stat, ranged (the Void Spot swallows it)
+    # +100% eva and +10% acc to self for 1 turn, then stab 1 enemy for 80 + 5% of their max hp as true damage, 2 turn cooldown
+    "Cloak and Dagger": ['A', 'D', 'F', 'H', {"buff": {"EE": 100, "DD": 10}, "turns": 1, "damage": 80, "plusPercentMaxHP": 5,
                                               "trueDamage": True, "cooldown": 2}],
     # +50% evasion for every other teammate for 3 turns, but enemies have to attack you for 1 turn, 4 turn cooldown
     "Shroud": ['D', 'H', 'L', {"allyBuff": {"EE": 50}, "turns": 3, "taunt": 1, "cooldown": 4}],
@@ -614,8 +633,8 @@ characterAbilities = {
   },
   "r_freeman2": {
     "Running Slap": ['A', 'F'],                                     # Flat Damage using Attack Stat
-    # runs away instead of attacking: +35% eva to self and +15% eva to every other teammate for this turn, 1 turn cooldown
-    "Huss": ['D', 'H', {"buff": {"EE": 35}, "allyBuff": {"EE": 15}, "turns": 2, "cooldown": 1}],
+    # runs away instead of attacking: +35% eva to self for this turn, 1 turn cooldown
+    "Huss": ['D', 'H', {"buff": {"EE": 35}, "turns": 2, "cooldown": 1}],
     # 45% chance to hit 1 enemy for 45 damage and Stun it (it skips its turn), if it misses he takes 15 damage himself
     "Charging Tackle": ['A', 'F', {"damage": 45, "accuracy": 45, "stun": 1, "missSelfDamage": 15}]
   },
@@ -749,7 +768,9 @@ enemyAbilities = {
   "Rose": {  # can only be fought in Heroes of Legend (enemyGroups)
     "Needlewand": ['A', 'F', {"ranged": True}],                     # Flat Damage using Attack Stat, ranged
     # 40 true damage, ranged: the battle hp that comes from defense and defense buffs don't help against it
-    "Quill of Echidna": ['A', 'F', {"trueHP": 70, "trueDamage": True, "ranged": True}]
+    "Quill of Echidna": ['A', 'F', {"trueHP": 70, "trueDamage": True, "ranged": True}],
+    # used when 1 of the enemies has more than 4 different debuffs: clears all debuffs on all of them
+    "Lessons in Showmanship": ['C', {"cleanseTeam": True, "moreDebuffsThan": 4, "useWhenReady": True}]
     # her premonition and Foresight are in enemyPremonitions and enemyForesight
   },
   "Dave": {  # can only be fought in Heroes of Legend (enemyGroups)
@@ -763,8 +784,8 @@ enemyAbilities = {
     "Distort": ['A', 'B'],                           # 50% of atk to every party member (the same as SSR Jayden's)
     "Sucker Punch": ['A', 'F', {"damage": 15, "sureHit": True, "stun": 1}],  # 15 damage to 1 party member, can't miss and Stuns them
     # 3 stacks of Bleed (3% of max hp each, like Jack Noir's) for every party member, it doesn't have to hit
-    "Radioactive Spatial Rift": ['B', 'M', {"lingering": {"name": "Bleed", "percent": 3, "turns": 1, "stackable": True, "stacks": 3}}],
+    "Radioactive Spatial Rift": ['B', 'M', {"lingering": {"name": "Burn", "percent": 3, "turns": 2, "stackable": True, "stacks": 3}}],
     # Ultimate: used on turn 3, 6, 9... the party goes in a new random order
-    "Spatial Shuffle": ['H', {"shuffleTeam": True, "useWhenReady": True, "requiresRound": 3, "cooldown": 2}]
+    "Spatial Shuffle": ['H', {"shuffleTeam": True, "useWhenReady": True, "requiresRound": 2, "cooldown": 1}]
   }
 }
